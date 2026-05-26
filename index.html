@@ -230,6 +230,37 @@
     <img id="lightboxImg" src="" alt="">
 </div>
 
+<!-- VIDEO CALL FULL SCREEN OVERLAY -->
+<div id="videoCallOverlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0f0f0f;z-index:99999;flex-direction:column;">
+  <video id="remoteVideo" autoplay playsinline style="width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;z-index:1;"></video>
+  <video id="localVideo" autoplay playsinline muted style="width:140px;height:100px;object-fit:cover;border-radius:12px;position:absolute;bottom:100px;left:20px;z-index:3;border:2px solid rgba(255,255,255,0.4);"></video>
+  <div style="position:absolute;top:0;left:0;right:0;padding:20px 24px;background:linear-gradient(to bottom,rgba(0,0,0,0.7),transparent);z-index:2;display:flex;align-items:center;justify-content:space-between;">
+    <div style="color:white;font-family:'Cairo',sans-serif;">
+      <div id="videoCallName" style="font-size:18px;font-weight:700;"></div>
+      <div id="videoCallStatus" style="font-size:12px;opacity:0.75;">مكالمة فيديو</div>
+    </div>
+    <span id="videoCallTimer" style="color:white;font-size:13px;background:rgba(0,0,0,0.4);padding:4px 12px;border-radius:20px;font-family:'Cairo',sans-serif;">00:00</span>
+  </div>
+  <div style="position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:3;display:flex;gap:20px;align-items:center;">
+    <div style="text-align:center;">
+      <button id="videoMuteBtn" onclick="toggleVideoMute()" style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:20px;cursor:pointer;backdrop-filter:blur(8px);"><i class="fa-solid fa-microphone"></i></button>
+      <div style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:6px;font-family:'Cairo',sans-serif;">صوت</div>
+    </div>
+    <div style="text-align:center;">
+      <button onclick="endVideoCall()" style="width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#ef4444,#dc2626);border:none;color:white;font-size:24px;cursor:pointer;box-shadow:0 0 24px rgba(239,68,68,0.5);"><i class="fa-solid fa-phone-slash"></i></button>
+      <div style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:6px;font-family:'Cairo',sans-serif;">إنهاء</div>
+    </div>
+    <div style="text-align:center;">
+      <button id="videoCamBtn" onclick="toggleVideoCam()" style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:20px;cursor:pointer;backdrop-filter:blur(8px);"><i class="fa-solid fa-video"></i></button>
+      <div style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:6px;font-family:'Cairo',sans-serif;">كاميرا</div>
+    </div>
+    <div style="text-align:center;">
+      <button onclick="addParticipantToCall()" style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:20px;cursor:pointer;backdrop-filter:blur(8px);"><i class="fa-solid fa-user-plus"></i></button>
+      <div style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:6px;font-family:'Cairo',sans-serif;">إضافة</div>
+    </div>
+  </div>
+</div>
+
 <!-- INCOMING CALL OVERLAY -->
 <div class="call-overlay" id="callOverlay">
   <div style="background:linear-gradient(160deg,#0f2027,#203a43,#1a3a4a);border-radius:28px;padding:40px 32px 32px;text-align:center;min-width:300px;max-width:360px;position:relative;box-shadow:0 40px 100px rgba(0,0,0,0.7);">
@@ -256,11 +287,35 @@
   </div>
 </div>
 
-<!-- ACTIVE CALL UI -->
-<div id="activeCallBar" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(13,79,28,0.95);color:white;padding:12px 24px;border-radius:50px;display:none;align-items:center;gap:16px;box-shadow:var(--shadow-lg);">
+<!-- PASSWORD RESET OVERLAY -->
+<div id="passwordResetOverlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:999999;background:linear-gradient(135deg,#0d4f1c 0%,#1a7a35 50%,#0d4f1c 100%);align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:24px;padding:40px 36px;max-width:420px;width:90%;box-shadow:0 40px 100px rgba(0,0,0,0.4);text-align:center;font-family:'Cairo',sans-serif;">
+    <div style="width:72px;height:72px;background:linear-gradient(135deg,#1b5e20,#4caf50);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+      <i class="fa-solid fa-lock-open" style="font-size:28px;color:white;"></i>
+    </div>
+    <h3 style="font-weight:700;color:#1b5e20;margin-bottom:6px;">تعيين كلمة مرور جديدة</h3>
+    <p style="color:#64748b;font-size:13px;margin-bottom:24px;">أدخل كلمة مرورك الجديدة مرتين للتأكيد</p>
+    <div style="text-align:right;margin-bottom:14px;">
+      <label style="font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;display:block;">كلمة المرور الجديدة</label>
+      <input type="password" id="newPasswordInput" placeholder="••••••••" style="width:100%;padding:12px 16px;border:2px solid #e5e7eb;border-radius:12px;font-size:14px;font-family:'Cairo',sans-serif;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='#1b5e20'" onblur="this.style.borderColor='#e5e7eb'">
+    </div>
+    <div style="text-align:right;margin-bottom:24px;">
+      <label style="font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;display:block;">تأكيد كلمة المرور</label>
+      <input type="password" id="confirmPasswordInput" placeholder="••••••••" style="width:100%;padding:12px 16px;border:2px solid #e5e7eb;border-radius:12px;font-size:14px;font-family:'Cairo',sans-serif;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='#1b5e20'" onblur="this.style.borderColor='#e5e7eb'">
+    </div>
+    <div id="resetPasswordMsg" style="color:#ef4444;font-size:12px;margin-bottom:12px;display:none;"></div>
+    <button onclick="submitPasswordReset()" style="width:100%;padding:14px;background:linear-gradient(135deg,#1b5e20,#4caf50);border:none;border-radius:12px;color:white;font-size:15px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;box-shadow:0 4px 20px rgba(27,94,32,0.35);transition:opacity 0.2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">
+      <i class="fa-solid fa-shield-check me-2"></i>حفظ كلمة المرور
+    </button>
+  </div>
+</div>
+
+<!-- ACTIVE CALL UI (VOICE) -->
+<div id="activeCallBar" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(13,79,28,0.95);color:white;padding:12px 24px;border-radius:50px;align-items:center;gap:16px;box-shadow:var(--shadow-lg);">
     <i class="fa-solid fa-phone-volume fa-bounce"></i>
     <span id="activeCallName" style="font-family:'Cairo',sans-serif;font-weight:700;"></span>
     <span id="callTimer" style="font-size:13px;opacity:0.8;">00:00</span>
+    <button class="call-btn" title="إضافة شخص للمكالمة" style="width:40px;height:40px;background:rgba(255,255,255,0.2);font-size:16px;" onclick="addParticipantToCall()"><i class="fa-solid fa-user-plus text-white"></i></button>
     <button class="call-btn" style="width:40px;height:40px;background:#ef4444;font-size:16px;" onclick="endCall()"><i class="fa-solid fa-phone-slash text-white"></i></button>
 </div>
 
@@ -406,11 +461,13 @@
                 <div class="row">
                     <div class="col-md-4 mb-4">
                         <div class="card p-4" style="border-top:3px solid var(--secondary);">
+                            <div id="groupCreateForm">
                             <h5 class="fw-bold mb-3" style="color:var(--primary-mid);"><i class="fa-solid fa-folder-plus me-2"></i>إنشاء منطقة عمل</h5>
                             <div class="mb-2"><input type="text" id="groupNameInput" class="form-control" placeholder="مثال: مشروع توشكى - بيفوت 4"></div>
                             <p class="text-muted small mb-3" id="groupRoleNote"></p>
                             <button class="btn btn-success w-100 fw-bold" onclick="addGroup()" style="border-radius:12px;"><i class="fa-solid fa-plus me-2"></i>تأسيس وحفظ</button>
                             <hr>
+                            </div>
                             <h6 class="fw-bold mb-2"><i class="fa-solid fa-search me-2"></i>البحث في المجموعات</h6>
                             <input type="text" class="form-control mb-2" id="groupSearchInput" placeholder="ابحث عن مجموعة..." oninput="searchGroups(this.value)">
                             <div id="groupSearchResults"></div>
@@ -721,7 +778,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, addDoc, setDoc, doc, getDoc, getDocs, query, orderBy, onSnapshot, deleteDoc, where, updateDoc, arrayUnion, arrayRemove, limit , writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail, confirmPasswordReset, verifyPasswordResetCode } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDDXq4XJfdR4lG40kq4MvosgmXv8xBd3CM",
@@ -777,8 +834,11 @@ let currentMentionInput = null;
 let viewedPostsThisSession = new Set(); // FIX: unique views
 let problemLat = null, problemLng = null;
 let callTimerInterval = null;
+let perUserUnreadDM = {};
 // WebRTC
 let localStream = null, peerConnection = null, currentCallId = null, callUnsubscribe = null;
+let currentCallType = 'صوتية'; // track call type for UI
+let videoMuted = false, videoCamOff = false;
 const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
 
 function saveTab(t) { sessionStorage.setItem('agri_tab', t); }
@@ -804,6 +864,9 @@ onAuthStateChanged(auth, async (user) => {
                 document.getElementById("postAuthorName").innerText = currentUserName;
                 const canCreate = ['مدير مشروع','مهندس ري محوري'].includes(currentUserRole);
                 document.getElementById("groupRoleNote").innerText = canCreate ? '' : '⚠ إنشاء الجروبات للمدير والمهندس فقط';
+                // إخفاء نموذج الإنشاء لغير المسموح لهم
+                const createGroupForm = document.getElementById("groupCreateForm");
+                if (createGroupForm) createGroupForm.style.display = canCreate ? 'block' : 'none';
                 if (data.avatar) {
                     document.getElementById("navAvatar").src = data.avatar;
                     document.getElementById("profilePreview").src = data.avatar;
@@ -925,8 +988,16 @@ async function autoJoinAllGroupsAsPM() {
             const g = gDoc.data();
             const members = g.members||[];
             const admins = g.admins||[g.creator];
-            if (!members.includes(currentUserEmail) && !admins.includes(currentUserEmail) && g.creator !== currentUserEmail) {
-                await updateDoc(doc(db,"groups",gDoc.id), { members:arrayUnion(currentUserEmail) });
+            const updates = {};
+            if (!members.includes(currentUserEmail) && g.creator !== currentUserEmail) {
+                updates.members = arrayUnion(currentUserEmail);
+            }
+            // المدير دائماً في قائمة الأدمن
+            if (!admins.includes(currentUserEmail) && g.creator !== currentUserEmail) {
+                updates.admins = arrayUnion(currentUserEmail);
+            }
+            if (Object.keys(updates).length) {
+                await updateDoc(doc(db,"groups",gDoc.id), updates);
             }
         }
     } catch(e) {}
@@ -949,8 +1020,25 @@ window.uploadProfileAvatar = async () => {
         // تحديث الصورة في جميع المنشورات السابقة
         const postsSnap = await getDocs(query(collection(db,"posts"), where("userEmail","==",currentUserEmail)));
         const updatePromises = [];
-        postsSnap.forEach(pDoc => updatePromises.push(updateDoc(doc(db,"posts",pDoc.id), { userAvatar: downloadURL })));
+        postsSnap.forEach(pDoc => {
+            updatePromises.push(updateDoc(doc(db,"posts",pDoc.id), { userAvatar: downloadURL }));
+        });
         await Promise.all(updatePromises);
+        // تحديث الصورة في جميع التعليقات السابقة
+        try {
+            const allPostsForComments = await getDocs(collection(db,"posts"));
+            for (const pDoc of allPostsForComments.docs) {
+                const commentsSnap = await getDocs(query(collection(db,"posts",pDoc.id,"comments"), where("userEmail","==",currentUserEmail)));
+                for (const cDoc of commentsSnap.docs) {
+                    await updateDoc(doc(db,"posts",pDoc.id,"comments",cDoc.id), { userAvatar: downloadURL });
+                    // تحديث الردود داخل التعليق
+                    const repliesSnap = await getDocs(query(collection(db,"posts",pDoc.id,"comments",cDoc.id,"replies"), where("userEmail","==",currentUserEmail)));
+                    for (const rDoc of repliesSnap.docs) {
+                        await updateDoc(doc(db,"posts",pDoc.id,"comments",cDoc.id,"replies",rDoc.id), { userAvatar: downloadURL });
+                    }
+                }
+            }
+        } catch(e) {}
         fileInput.value = "";
         Swal.fire({ toast:true, position:'top-end', icon:'success', title:'تم تحديث الصورة في كل مكان!', showConfirmButton:false, timer:2000 });
     } catch(err) {
@@ -1122,6 +1210,54 @@ window.copyInviteLink = async () => {
 };
 
 // Check invite code on load
+// ======= PASSWORD RESET VIA EMAIL LINK =======
+let _resetOobCode = null;
+async function checkPasswordResetMode() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') !== 'resetPassword') return;
+    const oobCode = params.get('oobCode');
+    if (!oobCode) return;
+    try {
+        await verifyPasswordResetCode(auth, oobCode);
+        _resetOobCode = oobCode;
+        // Hide auth/splash and show the reset overlay
+        document.getElementById("splashScreen").style.display = "none";
+        document.getElementById("authContainer").classList.add("d-none");
+        document.getElementById("mainPlatform").classList.add("d-none");
+        const overlay = document.getElementById("passwordResetOverlay");
+        overlay.style.display = "flex";
+    } catch(e) {
+        Swal.fire('الرابط منتهي الصلاحية','هذا الرابط لا يعمل بعد الآن. يرجى طلب رابط جديد.','error');
+    }
+}
+window.submitPasswordReset = async () => {
+    const p1 = document.getElementById("newPasswordInput").value;
+    const p2 = document.getElementById("confirmPasswordInput").value;
+    const msgEl = document.getElementById("resetPasswordMsg");
+    msgEl.style.display = "none";
+    if (p1.length < 6) { msgEl.innerText = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'; msgEl.style.display='block'; return; }
+    if (p1 !== p2) { msgEl.innerText = 'كلمتا المرور غير متطابقتين'; msgEl.style.display='block'; return; }
+    try {
+        await confirmPasswordReset(auth, _resetOobCode, p1);
+        document.getElementById("passwordResetOverlay").style.display = "none";
+        // Clean URL and show login
+        window.history.replaceState({}, document.title, window.location.pathname);
+        await Swal.fire({
+            title:'تم تغيير كلمة المرور!',
+            html:`<p style="font-family:'Cairo',sans-serif;">يمكنك الآن تسجيل الدخول بكلمة مرورك الجديدة</p>`,
+            icon:'success', confirmButtonColor:'#1b5e20', confirmButtonText:'تسجيل الدخول'
+        });
+        document.getElementById('authContainer').classList.remove('d-none');
+        document.getElementById('loginSection').classList.remove('d-none');
+        document.getElementById('registerSection').classList.add('d-none');
+    } catch(e) {
+        msgEl.innerText = 'حدث خطأ أثناء الحفظ. يرجى المحاولة مرة أخرى.';
+        msgEl.style.display = 'block';
+    }
+};
+// Call on load
+checkPasswordResetMode();
+
 function checkInviteParam() {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('invite');
@@ -1203,7 +1339,8 @@ window.uploadGroupCover = async () => {
 
 function listenToGroupSpecificData(gid, gName, creator, admins, joinRequests, groupMembers) {
     if (unsubGroupPosts) unsubGroupPosts();
-    const isAdmin = admins.includes(currentUserEmail);
+    // المدير دائماً أدمن في كل الجروبات
+    const isAdmin = currentUserRole === 'مدير مشروع' || admins.includes(currentUserEmail) || creator === currentUserEmail;
     const isCreator = creator === currentUserEmail;
     const q = query(collection(db,"posts"), where("groupName","==",gName), orderBy("createdAt","desc"));
     unsubGroupPosts = onSnapshot(q, snap => {
@@ -1259,6 +1396,8 @@ window.assignGroupAdmin = async (gid, email, name) => {
     if (r.isConfirmed) { await updateDoc(doc(db,"groups",gid),{ admins:arrayUnion(email) }); enterGroupView(gid); }
 };
 window.removeGroupAdmin = async (gid, email, name) => {
+    const tgt = allUsersCache[email];
+    if (tgt && tgt.bio === 'مدير مشروع') { Swal.fire('تنبيه','لا يمكن إزالة صلاحيات مدير المشروع أبداً','warning'); return; }
     const r = await Swal.fire({ title:`إلغاء صلاحيات ${name}؟`, icon:'warning', showCancelButton:true, confirmButtonColor:'#d33', cancelButtonText:'إلغاء', confirmButtonText:'إلغاء الصلاحيات' });
     if (r.isConfirmed) { await updateDoc(doc(db,"groups",gid),{ admins:arrayRemove(email) }); enterGroupView(gid); }
 };
@@ -1931,34 +2070,40 @@ window.clearChatMessages = async () => {
     }
 };
 
-// ======= WEBRTC CALLS (FIX #6) =======
+// ======= WEBRTC CALLS =======
 window.startVoiceCall = async (email, name) => { await initiateCall(email, name, 'صوتية'); };
 window.startVideoCall = async (email, name) => { await initiateCall(email, name, 'فيديو'); };
 
 async function initiateCall(targetEmail, targetName, callType) {
+    currentCallType = callType;
     try {
         const constraints = callType==='فيديو' ? { video:true, audio:true } : { audio:true, video:false };
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
         document.getElementById("localAudio").srcObject = localStream;
+        if (callType==='فيديو') {
+            document.getElementById("localVideo").srcObject = localStream;
+        }
     } catch(err) {
-        Swal.fire('خطأ في الميكروفون', 'يرجى السماح بالوصول إلى الميكروفون وإعادة المحاولة.', 'error'); return;
+        Swal.fire('خطأ في الكاميرا/الميكروفون', 'يرجى السماح بالوصول وإعادة المحاولة.', 'error'); return;
     }
-    // Create peer connection
     peerConnection = new RTCPeerConnection(STUN);
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-    peerConnection.ontrack = e => { document.getElementById("remoteAudio").srcObject = e.streams[0]; };
-    // Create call document
+    peerConnection.ontrack = e => {
+        const stream = e.streams[0];
+        document.getElementById("remoteAudio").srcObject = stream;
+        if (callType==='فيديو') {
+            document.getElementById("remoteVideo").srcObject = stream;
+        }
+    };
     const callRef = await addDoc(collection(db,"calls"),{
         caller:currentUserEmail, callerName:currentUserName, callerAvatar:document.getElementById("navAvatar").src,
         callee:targetEmail, calleeName:targetName,
         type:callType, status:'calling', createdAt:Date.now()
     });
     currentCallId = callRef.id;
-    // Create offer
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
     await updateDoc(callRef,{ offer:{ sdp:offer.sdp, type:offer.type } });
-    // ICE candidates
     peerConnection.onicecandidate = async e => {
         if (e.candidate) await addDoc(collection(db,"calls",currentCallId,"callerCandidates"), e.candidate.toJSON());
     };
@@ -1969,19 +2114,26 @@ async function initiateCall(targetEmail, targetName, callType) {
     document.getElementById("callStatus").innerText = 'جاري الاتصال...';
     document.getElementById("callAvatar").src = allUsersCache[targetEmail]?.avatar||'';
     const _caw2 = document.getElementById("callAcceptWrapper"); if(_caw2) _caw2.style.display='none';
-    // Listen for answer
     callUnsubscribe = onSnapshot(doc(db,"calls",currentCallId), async snap => {
         const data = snap.data();
         if (!data) return;
         if (data.answer && !peerConnection.currentRemoteDescription) {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
             document.getElementById("callStatus").innerText = 'متصل ✓';
+            // Hide incoming overlay and show call UI
+            document.getElementById("callOverlay").classList.remove("active");
+            if (callType==='فيديو') {
+                showVideoCallUI(targetName);
+            } else {
+                const bar = document.getElementById("activeCallBar");
+                bar.style.display = "flex";
+                document.getElementById("activeCallName").innerText = targetName;
+            }
             startCallTimer();
         }
         if (data.status==='rejected') { Swal.fire({ toast:true, position:'top-end', icon:'info', title:'الاتصال مرفوض', showConfirmButton:false, timer:2000 }); endCall(); }
         if (data.status==='ended') endCall();
     });
-    // Listen for callee candidates
     onSnapshot(collection(db,"calls",currentCallId,"calleeCandidates"), snap => {
         snap.docChanges().forEach(change => {
             if (change.type==='added') peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data())).catch(()=>{});
@@ -2016,13 +2168,23 @@ function showIncomingCall(callId, callData) {
 window.acceptCall = async () => {
     const callSnap = await getDoc(doc(db,"calls",currentCallId));
     const callData = callSnap.data();
+    currentCallType = callData.type;
     const constraints = callData.type==='فيديو' ? { video:true, audio:true } : { audio:true, video:false };
     try { localStream = await navigator.mediaDevices.getUserMedia(constraints); }
-    catch { Swal.fire('خطأ','لم يتم السماح بالوصول للميكروفون','error'); return; }
+    catch { Swal.fire('خطأ','لم يتم السماح بالوصول للكاميرا أو الميكروفون','error'); return; }
     document.getElementById("localAudio").srcObject = localStream;
+    if (callData.type==='فيديو') {
+        document.getElementById("localVideo").srcObject = localStream;
+    }
     peerConnection = new RTCPeerConnection(STUN);
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-    peerConnection.ontrack = e => { document.getElementById("remoteAudio").srcObject = e.streams[0]; };
+    peerConnection.ontrack = e => {
+        const stream = e.streams[0];
+        document.getElementById("remoteAudio").srcObject = stream;
+        if (callData.type==='فيديو') {
+            document.getElementById("remoteVideo").srcObject = stream;
+        }
+    };
     peerConnection.onicecandidate = async e => {
         if (e.candidate) await addDoc(collection(db,"calls",currentCallId,"calleeCandidates"), e.candidate.toJSON());
     };
@@ -2036,11 +2198,20 @@ window.acceptCall = async () => {
             if (c.type==='added') peerConnection.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(()=>{});
         });
     });
+    // Listen for call end from the other party
+    callUnsubscribe = onSnapshot(doc(db,"calls",currentCallId), snap => {
+        const d = snap.data();
+        if (!d) return;
+        if (d.status==='ended') endCall();
+    });
     document.getElementById("callOverlay").classList.remove("active");
-    const _caw3=document.getElementById("callAcceptWrapper"); if(_caw3) _caw3.style.display='block';
-    const bar = document.getElementById("activeCallBar");
-    bar.style.display = "flex";
-    document.getElementById("activeCallName").innerText = callData.callerName;
+    if (callData.type==='فيديو') {
+        showVideoCallUI(callData.callerName);
+    } else {
+        const bar = document.getElementById("activeCallBar");
+        bar.style.display = "flex";
+        document.getElementById("activeCallName").innerText = callData.callerName;
+    }
     startCallTimer();
 };
 window.rejectCall = async () => {
@@ -2048,17 +2219,89 @@ window.rejectCall = async () => {
     document.getElementById("callOverlay").classList.remove("active");
     currentCallId = null;
 };
+let _callEnding = false;
 window.endCall = async () => {
-    if (currentCallId) {
-        try { await updateDoc(doc(db,"calls",currentCallId),{ status:'ended' }); } catch{}
+    if (_callEnding) return; // prevent double-call
+    _callEnding = true;
+    // Unsubscribe FIRST so we don't receive our own 'ended' status back
+    if (callUnsubscribe) { callUnsubscribe(); callUnsubscribe = null; }
+    if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
+    const idToEnd = currentCallId;
+    currentCallId = null;
+    currentCallType = 'صوتية';
+    if (idToEnd) {
+        try { await updateDoc(doc(db,"calls",idToEnd),{ status:'ended' }); } catch{}
     }
     if (peerConnection) { peerConnection.close(); peerConnection = null; }
     if (localStream) { localStream.getTracks().forEach(t=>t.stop()); localStream = null; }
-    if (callUnsubscribe) { callUnsubscribe(); callUnsubscribe = null; }
-    if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
     document.getElementById("callOverlay").classList.remove("active");
     document.getElementById("activeCallBar").style.display = "none";
-    currentCallId = null;
+    document.getElementById("videoCallOverlay").style.display = "none";
+    const rv = document.getElementById("remoteVideo"); if(rv) rv.srcObject = null;
+    const lv = document.getElementById("localVideo"); if(lv) lv.srcObject = null;
+    videoMuted = false; videoCamOff = false;
+    _callEnding = false;
+};
+window.endVideoCall = () => endCall();
+
+function showVideoCallUI(personName) {
+    const overlay = document.getElementById("videoCallOverlay");
+    overlay.style.display = "flex";
+    document.getElementById("videoCallName").innerText = personName;
+    document.getElementById("videoCallStatus").innerText = 'مكالمة فيديو - متصل ✓';
+}
+window.toggleVideoMute = () => {
+    if (!localStream) return;
+    videoMuted = !videoMuted;
+    localStream.getAudioTracks().forEach(t => t.enabled = !videoMuted);
+    const btn = document.getElementById("videoMuteBtn");
+    if (btn) btn.innerHTML = videoMuted ? '<i class="fa-solid fa-microphone-slash"></i>' : '<i class="fa-solid fa-microphone"></i>';
+};
+window.toggleVideoCam = () => {
+    if (!localStream) return;
+    videoCamOff = !videoCamOff;
+    localStream.getVideoTracks().forEach(t => t.enabled = !videoCamOff);
+    const btn = document.getElementById("videoCamBtn");
+    if (btn) btn.innerHTML = videoCamOff ? '<i class="fa-solid fa-video-slash"></i>' : '<i class="fa-solid fa-video"></i>';
+};
+window.addParticipantToCall = async () => {
+    const users = Object.values(allUsersCache).filter(u => u.email !== currentUserEmail);
+    if (!users.length) { Swal.fire('تنبيه','لا يوجد مستخدمون آخرون','info'); return; }
+    const inputOptions = {};
+    users.forEach(u => { inputOptions[u.email] = `${u.name} - ${u.bio}`; });
+    const r = await Swal.fire({
+        title: 'إضافة شخص للمكالمة',
+        input: 'select',
+        inputOptions,
+        inputPlaceholder: 'اختر شخصاً...',
+        showCancelButton: true,
+        confirmButtonColor: '#1b5e20',
+        cancelButtonText: 'إلغاء',
+        confirmButtonText: 'دعوة',
+        inputValidator: v => { if (!v) return 'يرجى اختيار شخص'; },
+        // Force Swal to render above the video overlay
+        didOpen: () => {
+            const container = document.querySelector('.swal2-container');
+            if (container) container.style.zIndex = '9999999';
+        }
+    });
+    if (r.value) {
+        const u = allUsersCache[r.value];
+        if (!u) return;
+        await addDoc(collection(db,"calls"),{
+            caller:currentUserEmail, callerName:currentUserName, callerAvatar:document.getElementById("navAvatar").src,
+            callee:r.value, calleeName:u.name,
+            type:currentCallType, status:'calling', groupCall:true, createdAt:Date.now()
+        });
+        Swal.fire({
+            toast:true, position:'top-end', icon:'success',
+            title:`تم دعوة ${u.name} للانضمام`, showConfirmButton:false, timer:2500,
+            didOpen: () => {
+                const c = document.querySelector('.swal2-container');
+                if (c) c.style.zIndex = '9999999';
+            }
+        });
+    }
 };
 function startCallTimer() {
     let seconds = 0;
@@ -2066,8 +2309,11 @@ function startCallTimer() {
         seconds++;
         const m = String(Math.floor(seconds/60)).padStart(2,'0');
         const s = String(seconds%60).padStart(2,'0');
+        const formatted = `${m}:${s}`;
         const timerEl = document.getElementById("callTimer");
-        if (timerEl) timerEl.innerText = `${m}:${s}`;
+        if (timerEl) timerEl.innerText = formatted;
+        const videoTimerEl = document.getElementById("videoCallTimer");
+        if (videoTimerEl) videoTimerEl.innerText = formatted;
     }, 1000);
 }
 
@@ -2133,12 +2379,29 @@ window.openFullProfile = async (email) => {
 window.searchUsers = (val) => {
     const dd = document.getElementById("searchDropdown");
     if (!val.trim()) { dd.style.display="none"; return; }
-    const results = Object.values(allUsersCache).filter(u => u.name.toLowerCase().includes(val.toLowerCase())||(u.bio&&u.bio.toLowerCase().includes(val.toLowerCase())));
-    if (!results.length) { dd.innerHTML='<div class="p-3 text-muted small text-center">لا توجد نتائج</div>'; dd.style.display="block"; return; }
-    dd.innerHTML = results.slice(0,8).map(u=>`<div class="search-result-item" onclick="viewUserProfile('${u.email}')">
-        <img src="${u.avatar}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
-        <div><div class="fw-bold small">${u.name}</div><div class="text-muted" style="font-size:11px;">${u.bio}</div></div>
-    </div>`).join('');
+    const q = val.toLowerCase();
+    const userResults = Object.values(allUsersCache).filter(u => u.name.toLowerCase().includes(q)||(u.bio&&u.bio.toLowerCase().includes(q)));
+    const groupResults = Object.values(allGroupsCache).filter(g => g.name.toLowerCase().includes(q));
+    const hasResults = userResults.length || groupResults.length;
+    if (!hasResults) { dd.innerHTML='<div class="p-3 text-muted small text-center">لا توجد نتائج</div>'; dd.style.display="block"; return; }
+    let html = '';
+    if (userResults.length) {
+        html += `<div style="padding:6px 14px;font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:1px;background:#f8fafc;">الأشخاص</div>`;
+        html += userResults.slice(0,5).map(u=>`<div class="search-result-item" onclick="viewUserProfile('${u.email}')">
+            <img src="${u.avatar}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;">
+            <div><div class="fw-bold small">${u.name}</div><div class="text-muted" style="font-size:11px;">${u.bio}</div></div>
+        </div>`).join('');
+    }
+    if (groupResults.length) {
+        html += `<div style="padding:6px 14px;font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:1px;background:#f8fafc;">المجموعات</div>`;
+        html += groupResults.slice(0,4).map(g=>`<div class="search-result-item" onclick="switchTab('groupsTab',null);setTimeout(()=>enterGroupView('${g.id}'),300);">
+            <div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fa-solid fa-folder-open" style="color:white;font-size:14px;"></i>
+            </div>
+            <div><div class="fw-bold small">${g.name}</div><div class="text-muted" style="font-size:11px;">مجموعة · ${(g.members||[]).length} عضو</div></div>
+        </div>`).join('');
+    }
+    dd.innerHTML = html;
     dd.style.display = "block";
 };
 window.hideSearch = () => { document.getElementById("searchDropdown").style.display="none"; };
