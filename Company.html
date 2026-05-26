@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة الهندسة الزراعية المتكاملة | AgriLink Pro</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root { --primary-color: #1b5e20; --secondary-color: #4caf50; --dark-bg: #f0f2f5; }
+        body { background-color: var(--dark-bg); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh; margin: 0; }
+        .auth-wrapper { background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .auth-card { background: rgba(255, 255, 255, 0.98); border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); border: none; }
+        .btn-agri { background-color: var(--primary-color); color: white; border-radius: 12px; transition: 0.3s; }
+        .btn-agri:hover { background-color: #0e3a12; color: white; }
+        .navbar { background-color: var(--primary-color) !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .nav-link { color: rgba(255,255,255,0.8) !important; cursor: pointer; transition: all 0.3s; text-align: center; }
+        .nav-link.active, .nav-link:hover { color: #fff !important; font-weight: bold; transform: scale(1.05); }
+        .card { border: none; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); margin-bottom: 20px; background: #fff; }
+        .profile-img-nav { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid white; cursor: pointer; }
+        .app-content { display: none; }
+        .app-content.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .ai-sidebar { border-left: 1px solid #dee2e6; background: #fff; height: 70vh; overflow-y: auto; border-radius: 16px; }
+        .ai-chat-box { height: 50vh; overflow-y: auto; background: #f8f9fa; border-radius: 12px; padding: 15px; border: 1px solid #e9ecef; }
+        .chat-tab-item { cursor: pointer; padding: 10px 15px; border-radius: 10px; margin-bottom: 5px; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        .chat-tab-item:hover, .chat-tab-item.active { background-color: #e8f5e9; color: var(--primary-color); font-weight: bold; }
+        .group-header-cover { height: 180px; background-size: cover; background-position: center; border-radius: 16px 16px 0 0; position: relative; background-color: #ccc; }
+        .profile-avatar-clickable { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid white; cursor: pointer; transition: 0.3s; position: relative; }
+        .profile-avatar-clickable:hover { filter: brightness(0.8); }
+        .profile-avatar-clickable::after { content: '📷'; position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); border-radius: 50%; padding: 5px; }
+        .user-card-grid { transition: 0.3s; border: 1px solid #eef0f2; }
+        .user-card-grid:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+        .comment-box { background: #f8f9fa; border-radius: 12px; padding: 10px 15px; margin-top: 8px; }
+        .splash-screen { position: fixed; top:0; left:0; width:100vw; height:100vh; background:#fff; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+        .all-users-icon-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #1b5e20, #4caf50); color: white; border-radius: 16px; padding: 20px; cursor: pointer; transition: 0.3s; text-decoration: none; border: none; width: 100%; }
+        .all-users-icon-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(27,94,32,0.3); color: white; }
+        .admin-badge { background: linear-gradient(135deg, #ff6f00, #ffa000); color: white; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: bold; }
+        .msg-bubble { position: relative; display: inline-block; }
+        .msg-bubble .delete-msg-btn { display: none; position: absolute; top: -8px; left: -8px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; line-height: 18px; text-align: center; padding: 0; }
+        .msg-bubble:hover .delete-msg-btn { display: block; }
+    </style>
+</head>
+<body>
+
+    <div id="splashScreen" class="splash-screen">
+        <i class="fa-solid fa-seedling fa-spin fa-4x text-success mb-3"></i>
+        <h5 class="fw-bold text-dark">جاري جلب بيانات المهندس الحية من السيرفر...</h5>
+    </div>
+
+    <div id="authContainer" class="auth-wrapper d-none">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-5 auth-card p-5">
+                    
+                    <div id="loginSection">
+                        <div class="text-center mb-4">
+                            <i class="fa-solid fa-seedling fa-3x text-success mb-2"></i>
+                            <h3 class="fw-bold text-dark">أجري-لينك الهندسية</h3>
+                            <p class="text-muted">نظام إدارة الري المحوري والعمليات الحية</p>
+                        </div>
+                        <form id="loginForm" onsubmit="handleLogin(event)">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">البريد الإلكتروني</label>
+                                <input type="email" id="loginEmail" class="form-control py-2" placeholder="name@company.com" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">كلمة المرور</label>
+                                <input type="password" id="loginPass" class="form-control py-2" placeholder="••••••••" required>
+                            </div>
+                            <button type="submit" class="btn btn-agri w-100 fw-bold shadow-sm" style="padding: 10px;">تسجيل الدخول الآمن</button>
+                        </form>
+                        <div class="text-center mt-4">
+                            <p class="small text-muted">ليس لديك حساب؟ <span class="text-success fw-bold" style="cursor:pointer;" onclick="toggleAuth(true)">إنشاء حساب جديد</span></p>
+                        </div>
+                    </div>
+
+                    <div id="registerSection" class="d-none">
+                        <div class="text-center mb-4">
+                            <i class="fa-solid fa-user-plus fa-3x text-success mb-2"></i>
+                            <h3 class="fw-bold text-dark">انضم لغرفة العمليات الحية</h3>
+                        </div>
+                        <form id="registerForm" onsubmit="handleRegister(event)">
+                            <div class="mb-3"><label class="form-label fw-bold">الاسم بالكامل</label><input type="text" id="regName" class="form-control" placeholder="م. كريم عمرو" required></div>
+                            <div class="mb-3"><label class="form-label fw-bold">البريد الإلكتروني</label><input type="email" id="regEmail" class="form-control" placeholder="eng.karim@gmail.com" required></div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">الدور الوظيفي والمسؤولية</label>
+                                <select id="regRole" class="form-select" required>
+                                    <option value="مدير مشروع">مدير مشروع</option>
+                                    <option value="مهندس ري محوري">مهندس ري محوري</option>
+                                    <option value="استشاري هندسي">استشاري هندسي</option>
+                                    <option value="فني">فني</option>
+                                    <option value="عامل">عامل</option>
+                                </select>
+                            </div>
+                            <div class="mb-3"><label class="form-label fw-bold">رقم الهاتف الفعلي</label><input type="tel" id="regPhone" class="form-control" placeholder="010XXXXXXXX" required></div>
+                            <div class="mb-3"><label class="form-label fw-bold">كلمة المرور</label><input type="password" id="regPass" class="form-control" placeholder="••••••••" required></div>
+                            <button type="submit" class="btn btn-agri w-100 fw-bold shadow-sm" style="padding:10px;">تأكيد وإنشاء الحساب الحقيقي</button>
+                        </form>
+                        <div class="text-center mt-4">
+                            <p class="small text-muted">لديك حساب؟ <span class="text-success fw-bold" style="cursor:pointer;" onclick="toggleAuth(false)">تسجيل الدخول</span></p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="mainPlatform" class="d-none">
+        <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow-sm">
+            <div class="container-fluid px-4">
+                <a class="navbar-brand fw-bold fs-4" href="#" onclick="switchTab('homeTab', this)"><i class="fa-solid fa-seedling me-2"></i>أجري-لينك</a>
+                <div class="collapse navbar-collapse">
+                    <ul class="navbar-nav mx-auto gap-4">
+                        <li class="nav-item"><a id="navHomeLink" class="nav-link active" onclick="switchTab('homeTab', this)"><i class="fa-solid fa-house fa-lg d-block text-center mb-1"></i>المنزل</a></li>
+                        <li class="nav-item"><a class="nav-link" onclick="switchTab('groupsTab', this)"><i class="fa-solid fa-users fa-lg d-block text-center mb-1"></i>المجموعات والمشاريع</a></li>
+                        <li class="nav-item position-relative">
+                            <a class="nav-link" onclick="switchTab('notificationsTab', this)">
+                                <i class="fa-solid fa-bell fa-lg d-block text-center mb-1"></i>الإشعارات
+                                <span class="position-absolute top-0 start-50 translate-middle-x badge rounded-pill bg-danger" id="notifBadge" style="font-size: 10px; margin-right: 15px; display:none;">0</span>
+                            </a>
+                        </li>
+                        <li class="nav-item"><a class="nav-link text-warning fw-bold" onclick="switchTab('aiTab', this)"><i class="fa-solid fa-robot fa-lg d-block text-center mb-1 text-warning"></i>مساعد جيميناي 🤖</a></li>
+                    </ul>
+                    <ul class="navbar-nav ms-auto align-items-center">
+                        <li class="nav-item ms-3 text-white small" id="welcomeUser">مرحبًا مهندس</li>
+                        <li class="nav-item dropdown">
+                            <img id="navAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100" class="profile-img-nav" onclick="switchTab('profileTab', null)">
+                        </li>
+                        <li class="nav-item ms-3"><button class="btn btn-sm btn-outline-light" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket"></i></button></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mt-4">
+            <!-- تاب المنزل -->
+            <div id="homeTab" class="app-content active">
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="card p-4 shadow-sm mb-4">
+                            <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-pen-to-square text-success me-2"></i>نشر تحديث هندسي أو فني حي</h6>
+                            <div class="mb-3">
+                                <select id="postGroupSelect" class="form-select border-1 rounded-3">
+                                    <option value="">إختر المجموعة المحددة للنشر داخلها *</option>
+                                </select>
+                            </div>
+                            <textarea id="postText" class="form-control border-1 bg-light rounded-3 mb-3" rows="3" placeholder="اكتب تفاصيل التعديل الهيدروليكي، أو حالة البيفوت الحالية..."></textarea>
+                            <div class="d-flex justify-content-end"><button class="btn btn-success px-4 fw-bold" onclick="createNewPost()">بث المنشور الآن</button></div>
+                        </div>
+                        <div id="feedContainer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تاب المجموعات -->
+            <div id="groupsTab" class="app-content">
+                <div id="groupsGridSection">
+                    <div class="row">
+                        <div class="col-md-4 mb-4">
+                            <div class="card p-4 shadow-sm">
+                                <h5 class="fw-bold text-success mb-3"><i class="fa-solid fa-folder-plus me-2"></i>إنشاء منطقة عمل / مشروع</h5>
+                                <div class="mb-3"><label class="small fw-bold">اسم المجموعة أو الموقع</label><input type="text" id="groupNameInput" class="form-control" placeholder="مثال: مشروع توشكى - بيفوت 4"></div>
+                                <button class="btn btn-success w-100 fw-bold" onclick="addGroup()">+ تأسيس وحفظ في السيرفر</button>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h4 class="fw-bold mb-3 text-dark">المشاريع والمجموعات النشطة حيداً</h4>
+                            <div class="row" id="groupsContainer"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- عرض الجروب المفرد -->
+                <div id="singleGroupSection" class="d-none card shadow">
+                    <div id="groupCover" class="group-header-cover">
+                        <div class="position-absolute bottom-0 start-0 p-3 bg-dark bg-opacity-50 w-100 text-white rounded-bottom d-flex justify-content-between align-items-center">
+                            <div>
+                                <h3 id="singleGroupName" class="fw-bold mb-1">اسم المجموعة</h3>
+                                <p class="small mb-0" id="singleGroupAdminText">المدير المسئول: </p>
+                            </div>
+                            <div>
+                                <label class="btn btn-sm btn-light fw-bold" id="uploadCoverBtn" style="display:none;">
+                                    <i class="fa-solid fa-image me-1"></i> تغيير الغلاف حياً
+                                    <input type="file" id="groupCoverFileInput" accept="image/*" style="display:none;" onchange="uploadGroupCover()">
+                                </label>
+                                <button class="btn btn-sm btn-outline-light fw-bold ms-2" onclick="exitGroupView()"><i class="fa-solid fa-arrow-left me-1"></i> العودة للمجموعات</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 row">
+                        <div class="col-md-8">
+                            <h5 class="fw-bold text-muted mb-3"><i class="fa-solid fa-stream me-2"></i>منشورات هذا المشروع فقط</h5>
+                            <div id="groupSpecificFeed"></div>
+                        </div>
+                        <div class="col-md-4 border-start">
+                            <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-user-shield me-2"></i>هيكل الإدارة والأفراد</h5>
+                            <div id="groupUsersList" class="list-group"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تاب الإشعارات -->
+            <div id="notificationsTab" class="app-content">
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="card p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-bell text-success me-2"></i>سجل الإشعارات الحية والمباشرة</h5>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="clearAllNotifications()">مسح السجل بالكامل</button>
+                            </div>
+                            <div class="list-group" id="notificationsContainer">
+                                <p class="text-muted text-center py-4">لا توجد إشعارات حية حالياً في قطاعك.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تاب الذكاء الاصطناعي -->
+            <div id="aiTab" class="app-content">
+                <div class="row">
+                    <div class="col-md-3">
+                        <button class="btn btn-warning w-100 fw-bold mb-3 py-2 shadow-sm" onclick="createNewAIChatRoom()"><i class="fa-solid fa-plus me-2"></i>محادثة هندسية جديدة</button>
+                        <div class="ai-sidebar p-3" id="aiSidebarRooms"></div>
+                    </div>
+                    <div class="col-md-9">
+                        <div class="card p-4 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold text-success mb-0"><i class="fa-solid fa-robot me-2"></i>غرفة نقاش ومساعد جيميناي الحركي المطور</h5>
+                                <span class="badge bg-light text-dark shadow-sm" id="activeRoomLabel">الغرفة الحالية</span>
+                            </div>
+                            <div class="ai-chat-box mb-3" id="aiChatBox"></div>
+                            <div class="input-group">
+                                <input type="text" id="aiInput" class="form-control" placeholder="اسأل جيميناي عن ضغوط الفوهات، تصرفات الرشاشات KPT، أو حسابات الفقد في السنتر بيفوت...">
+                                <button class="btn btn-warning fw-bold px-4" onclick="askGeminiAI()">بث السؤال</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تاب الملف الشخصي -->
+            <div id="profileTab" class="app-content">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card p-4 text-center">
+                            <h5 class="fw-bold mb-4 text-dark"><i class="fa-solid fa-user-gear me-2"></i>ملف المهندس الشخصي</h5>
+                            <div class="mb-3 position-relative d-inline-block mx-auto">
+                                <img id="profilePreview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" class="profile-avatar-clickable" onclick="document.getElementById('avatarFileInput').click()">
+                                <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" onchange="uploadProfileAvatar()">
+                            </div>
+                            <p class="text-muted small">انقر على صورتك لتعديلها ورفعها مباشرة للسيرفر</p>
+                            <div class="mb-3 text-start"><label class="form-label fw-bold">الاسم بالكامل</label><input type="text" id="profileNameInput" class="form-control"></div>
+                            <div class="mb-3 text-start"><label class="form-label fw-bold">الوصف والمسؤولية الوظيفية</label><input type="text" id="profileBioInput" class="form-control" readonly disabled></div>
+                            
+                            <div class="mb-4 text-start">
+                                <label class="form-label fw-bold">رقم الهاتف للاتصال السريع</label>
+                                <div class="input-group">
+                                    <input type="text" id="profilePhoneInput" class="form-control" readonly>
+                                    <button class="btn btn-outline-secondary" type="button" onclick="copyPhoneNumber()"><i class="fa-solid fa-copy"></i> نسخ</button>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-success w-100 fw-bold py-2 mb-3" onclick="updateProfileData()">تحديث ومزامنة البيانات</button>
+
+                            <!-- زر جميع المستخدمين -->
+                            <button class="all-users-icon-btn" onclick="switchTab('allUsersTab', null)">
+                                <i class="fa-solid fa-users fa-2x mb-2"></i>
+                                <span class="fw-bold fs-6">جميع المستخدمين</span>
+                                <small class="opacity-75 mt-1">عرض كل الأعضاء والتواصل معهم</small>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <div class="card p-4 shadow-sm">
+                            <h5 class="fw-bold mb-3 text-success"><i class="fa-solid fa-network-wired me-2"></i>دليل الكوادر الهندسية والعمال والاتصالات</h5>
+                            <div class="row" id="profileUsersPreview"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- مودال الرسائل المباشرة -->
+                <div class="modal fade" id="chatModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content" style="border-radius:20px;">
+                            <div class="modal-header bg-success text-white" style="border-radius: 20px 20px 0 0;">
+                                <h5 class="modal-title fw-bold" id="chatModalTitle">غرفة مراسلة آمنة</h5>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <button class="btn btn-sm btn-outline-light" onclick="clearChatMessages()" title="مسح الرسائل يدوياً"><i class="fa-solid fa-trash-can"></i> مسح الكل</button>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                            </div>
+                            <div class="modal-body">
+                                <div id="directChatBox" style="height:350px; overflow-y:auto; background:#f8f9fa; border-radius:12px; padding:15px; border:1px solid #eef0f2;" class="mb-3"></div>
+                                <div class="input-group">
+                                    <input type="text" id="directChatInput" class="form-control" placeholder="اكتب رسالتك الفورية للمهندس..." onkeypress="if(event.key==='Enter') sendDirectMessage()">
+                                    <button class="btn btn-success fw-bold" onclick="sendDirectMessage()"><i class="fa-solid fa-paper-plane me-1"></i>إرسال</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تاب جميع المستخدمين -->
+            <div id="allUsersTab" class="app-content">
+                <div class="d-flex align-items-center mb-4 gap-3">
+                    <button class="btn btn-outline-success" onclick="switchTab('profileTab', null)"><i class="fa-solid fa-arrow-right me-1"></i>العودة للملف الشخصي</button>
+                    <h4 class="fw-bold text-dark mb-0"><i class="fa-solid fa-users text-success me-2"></i>جميع المستخدمين على المنصة</h4>
+                </div>
+                <div class="card p-4 shadow-sm">
+                    <div class="row" id="allUsersContainer"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, setDoc, doc, getDoc, getDocs, query, orderBy, onSnapshot, deleteDoc, where, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDDXq4XJfdR4lG40kq4MvosgmXv8xBd3CM",
+            authDomain: "my-company-33c7a.firebaseapp.com",
+            projectId: "my-company-33c7a",
+            storageBucket: "my-company-33c7a.appspot.com",
+            messagingSenderId: "442060528250",
+            appId: "1:442060528250:web:e3f8c9d3748992223e79c3",
+            measurementId: "G-9VT6V9KMTM"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const storage = getStorage(app);
+
+        let currentUserEmail = "";
+        let currentUserName = "";
+        let currentUserRole = "";
+        let currentActiveGroup = null;
+        let currentActiveGroupData = null;
+        let currentActiveAIChatRoomId = "default";
+        let targetChatUserEmail = "";
+        let currentChatRoomId = "";
+        let unsubGroupPosts = null;
+
+        // ===== FIX 1: حفظ التاب عند الريفريش =====
+        function saveCurrentTab(tabId) {
+            sessionStorage.setItem('agrilink_active_tab', tabId);
+        }
+
+        function restoreLastTab() {
+            const savedTab = sessionStorage.getItem('agrilink_active_tab');
+            if (savedTab && document.getElementById(savedTab)) {
+                // لو كان في تاب جروب، ارجع للجروبات
+                const safeTab = (savedTab === 'singleGroupSection') ? 'groupsTab' : savedTab;
+                switchTabInternal(safeTab);
+            }
+        }
+
+        // ===== FIX 1: onAuthStateChanged مع استعادة الجلسة =====
+        onAuthStateChanged(auth, async (user) => {
+            document.getElementById("splashScreen").style.display = "none";
+            
+            if (user) {
+                currentUserEmail = user.email.toLowerCase().trim();
+                try {
+                    const userDoc = await getDoc(doc(db, "users", currentUserEmail));
+                    if (userDoc.exists()) {
+                        let data = userDoc.data();
+                        currentUserName = data.name;
+                        currentUserRole = data.bio;
+                        
+                        document.getElementById("welcomeUser").innerText = `مرحبًا، ${currentUserName} (${currentUserRole})`;
+                        document.getElementById("profileNameInput").value = currentUserName;
+                        document.getElementById("profileBioInput").value = currentUserRole;
+                        document.getElementById("profilePhoneInput").value = data.phone || "لا يوجد";
+                        if (data.avatar) {
+                            document.getElementById("navAvatar").src = data.avatar;
+                            document.getElementById("profilePreview").src = data.avatar;
+                        }
+                        
+                        document.getElementById('authContainer').classList.add('d-none');
+                        document.getElementById('mainPlatform').classList.remove('d-none');
+                        
+                        listenToGroups();
+                        listenToAllPosts();
+                        listenToNotifications();
+                        listenToAIChatRooms();
+                        listenToAllUsers();
+
+                        // استعادة التاب الأخير بعد تحميل كل البيانات
+                        restoreLastTab();
+
+                    } else {
+                        // FIX 4: المستخدم موجود في Auth لكن بياناته مش في Firestore
+                        // نحاول نكمل تسجيله أو نطلب إعادة تسجيل
+                        document.getElementById("splashScreen").style.display = "none";
+                        showAuthScreens();
+                        Swal.fire({
+                            title: 'استكمال بيانات الحساب',
+                            text: 'تم العثور على حسابك لكن البيانات الشخصية ناقصة. يرجى إنشاء الحساب مرة أخرى لاستكمال البيانات.',
+                            icon: 'warning',
+                            confirmButtonText: 'إنشاء الحساب',
+                            confirmButtonColor: '#1b5e20'
+                        }).then(() => {
+                            toggleAuth(true);
+                        });
+                    }
+                } catch (e) {
+                    console.error("Error fetching user doc:", e);
+                    showAuthScreens();
+                }
+            } else {
+                showAuthScreens();
+            }
+        });
+
+        function showAuthScreens() {
+            document.getElementById('mainPlatform').classList.add('d-none');
+            document.getElementById('authContainer').classList.remove('d-none');
+        }
+
+        window.toggleAuth = (showRegister) => {
+            if (showRegister) {
+                document.getElementById('loginSection').classList.add('d-none');
+                document.getElementById('registerSection').classList.remove('d-none');
+            } else {
+                document.getElementById('registerSection').classList.add('d-none');
+                document.getElementById('loginSection').classList.remove('d-none');
+            }
+        };
+
+        // ===== FIX 4: إصلاح التسجيل - انتظار حفظ Firestore قبل الانتهاء =====
+        window.handleRegister = async (e) => {
+            e.preventDefault();
+            let name = document.getElementById('regName').value.trim();
+            let email = document.getElementById('regEmail').value.toLowerCase().trim();
+            let role = document.getElementById('regRole').value;
+            let phone = document.getElementById('regPhone').value.trim();
+            let pass = document.getElementById('regPass').value;
+
+            if (pass.length < 6) {
+                Swal.fire('خطأ', 'كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+                return;
+            }
+
+            Swal.fire({ title: 'جاري إنشاء حسابك المعتمد...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+                
+                // FIX 4: حفظ في Firestore أولاً قبل أي شيء آخر
+                await setDoc(doc(db, "users", email), { 
+                    name, 
+                    email, 
+                    bio: role, 
+                    phone, 
+                    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100",
+                    createdAt: Date.now()
+                });
+
+                Swal.fire({
+                    title: 'تم الإنشاء بنجاح، أهلاً بك!',
+                    text: `المهندس/الكادر: ${name}، تم تسجيل حسابك الرسمي بنجاح.`,
+                    icon: 'success',
+                    confirmButtonText: 'الدخول للمنصة الموحدة',
+                    confirmButtonColor: '#1b5e20'
+                });
+            } catch (err) {
+                console.error(err);
+                let errMsg = 'حدث خطأ غير متوقع';
+                if (err.code === 'auth/email-already-in-use') {
+                    errMsg = 'هذا البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول مباشرة.';
+                } else if (err.code === 'auth/weak-password') {
+                    errMsg = 'كلمة المرور ضعيفة جداً، يرجى استخدام 6 أحرف على الأقل.';
+                } else if (err.code === 'auth/invalid-email') {
+                    errMsg = 'صيغة البريد الإلكتروني غير صحيحة.';
+                } else if (err.code === 'auth/operation-not-allowed') {
+                    errMsg = 'يرجى تفعيل Email/Password في لوحة تحكم Firebase.';
+                } else {
+                    errMsg = err.message;
+                }
+                Swal.fire('فشل الإنشاء', errMsg, 'error');
+            }
+        };
+
+        // ===== FIX 4: إصلاح تسجيل الدخول مع رسائل خطأ واضحة =====
+        window.handleLogin = async (e) => {
+            e.preventDefault();
+            let email = document.getElementById('loginEmail').value.toLowerCase().trim();
+            let pass = document.getElementById('loginPass').value;
+            
+            Swal.fire({ title: 'جاري التحقق والدخول...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                Swal.close();
+            } catch (err) {
+                console.error('Login error:', err.code);
+                let errMsg = 'حدث خطأ غير متوقع';
+                if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+                    errMsg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة. تأكد من البيانات وحاول مرة أخرى.';
+                } else if (err.code === 'auth/too-many-requests') {
+                    errMsg = 'تم تعطيل الحساب مؤقتاً بسبب محاولات متكررة. انتظر قليلاً ثم حاول مجدداً.';
+                } else if (err.code === 'auth/network-request-failed') {
+                    errMsg = 'فشل الاتصال بالشبكة. تأكد من اتصالك بالإنترنت.';
+                } else if (err.code === 'auth/operation-not-allowed') {
+                    errMsg = 'يرجى تفعيل Email/Password في لوحة تحكم Firebase.';
+                } else {
+                    errMsg = 'كود الخطأ: ' + err.code;
+                }
+                Swal.fire('خطأ في الدخول', errMsg, 'error');
+            }
+        };
+
+        window.handleLogout = () => {
+            sessionStorage.removeItem('agrilink_active_tab');
+            signOut(auth).then(() => { location.reload(); });
+        };
+
+        window.uploadProfileAvatar = async () => {
+            const fileInput = document.getElementById('avatarFileInput');
+            if (fileInput.files.length === 0) return;
+            const file = fileInput.files[0];
+            Swal.fire({ title: 'جاري رفع صورتك الشخصية...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            try {
+                const userDoc = await getDoc(doc(db, "users", currentUserEmail));
+                if (userDoc.exists() && userDoc.data().avatarPath) {
+                    try { await deleteObject(ref(storage, userDoc.data().avatarPath)); } catch(e) {}
+                }
+                const storagePath = `avatars/${currentUserEmail}_${Date.now()}_${file.name}`;
+                const storageRef = ref(storage, storagePath);
+                await uploadBytes(storageRef, file);
+                const downloadURL = await getDownloadURL(storageRef);
+                await setDoc(doc(db, "users", currentUserEmail), { avatar: downloadURL, avatarPath: storagePath }, { merge: true });
+                document.getElementById("profilePreview").src = downloadURL;
+                document.getElementById("navAvatar").src = downloadURL;
+                Swal.fire('ممتاز!', 'تم تحديث ورفع صورتك الشخصية حياً.', 'success');
+            } catch (err) { Swal.fire('فشل في الرفع', err.message, 'error'); }
+        };
+
+        window.updateProfileData = async () => {
+            let name = document.getElementById("profileNameInput").value;
+            try {
+                await setDoc(doc(db, "users", currentUserEmail), { name }, { merge: true });
+                currentUserName = name;
+                document.getElementById("welcomeUser").innerText = `مرحبًا، ${currentUserName} (${currentUserRole})`;
+                Swal.fire('تم الحفظ', 'تمت مزامنة تعديل الاسم بنجاح.', 'success');
+            } catch (err) { Swal.fire('خطأ', err.message, 'error'); }
+        };
+
+        window.copyPhoneNumber = () => {
+            let numInput = document.getElementById("profilePhoneInput");
+            numInput.select();
+            document.execCommand("copy");
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'تم نسخ الرقم للحافظة', showConfirmButton: false, timer: 1500 });
+        };
+
+        // ===== FIX 2: إنشاء جروب مع مصفوفة الأدمن =====
+        window.addGroup = async () => {
+            let name = document.getElementById("groupNameInput").value.trim();
+            if (!name) return;
+            try {
+                await addDoc(collection(db, "groups"), { 
+                    name, 
+                    creator: currentUserEmail,
+                    creatorName: currentUserName,
+                    admins: [currentUserEmail],
+                    coverUrl: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800",
+                    createdAt: Date.now()
+                });
+                document.getElementById("groupNameInput").value = "";
+                Swal.fire('تم التأسيس', `تم إنشاء غرفة عمليات وتعيينك كأدمن رسمي لجروب ${name}`, 'success');
+            } catch (err) { Swal.fire('خطأ', err.message, 'error'); }
+        };
+
+        function listenToGroups() {
+            onSnapshot(collection(db, "groups"), (snapshot) => {
+                let container = document.getElementById("groupsContainer");
+                let select = document.getElementById("postGroupSelect");
+                container.innerHTML = "";
+                select.innerHTML = '<option value="">إختر المجموعة المحددة للنشر داخلها *</option>';
+                
+                snapshot.forEach((docSnap) => {
+                    let group = docSnap.data();
+                    let admins = group.admins || [group.creator];
+                    let isAdmin = admins.includes(currentUserEmail);
+                    container.innerHTML += `<div class="col-md-6 mb-3">
+                        <div class="card bg-white p-3 d-flex flex-row justify-content-between align-items-center border-start border-success border-4 shadow-sm">
+                            <div onclick="enterGroupView('${docSnap.id}')" style="cursor:pointer; flex-grow:1;">
+                                <h6 class="fw-bold text-success mb-1">📁 ${group.name}</h6>
+                                <span class="text-muted small">المسؤول: ${group.creatorName}</span>
+                                ${isAdmin ? '<span class="admin-badge ms-2">أدمن</span>' : ''}
+                            </div>
+                            ${group.creator === currentUserEmail ? `<button class="btn btn-sm btn-outline-danger ms-2" onclick="deleteGroup('${docSnap.id}')"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        </div>
+                    </div>`;
+                    select.innerHTML += `<option value="${group.name}">${group.name}</option>`;
+                });
+            });
+        }
+
+        window.deleteGroup = async (id) => {
+            Swal.fire({
+                title: 'هل أنت متأكد؟',
+                text: "سيتم حذف المشروع وكل بياناته نهائياً!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'إلغاء',
+                confirmButtonText: 'نعم، مسح المشروع'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await deleteDoc(doc(db, "groups", id));
+                    Swal.fire('تم المسح!', 'تم حذف الجروب من السيرفر.', 'success');
+                }
+            });
+        };
+
+        // ===== FIX 2: enterGroupView مع نظام الأدمن =====
+        window.enterGroupView = async (groupId) => {
+            currentActiveGroup = groupId;
+            document.getElementById("groupsGridSection").classList.add("d-none");
+            document.getElementById("singleGroupSection").classList.remove("d-none");
+
+            const groupDoc = await getDoc(doc(db, "groups", groupId));
+            if (groupDoc.exists()) {
+                let groupData = groupDoc.data();
+                currentActiveGroupData = { id: groupId, ...groupData };
+                let admins = groupData.admins || [groupData.creator];
+                let isCreator = (groupData.creator === currentUserEmail);
+                let isAdmin = admins.includes(currentUserEmail);
+                
+                document.getElementById("singleGroupName").innerText = `مشروع: ${groupData.name}`;
+                document.getElementById("singleGroupAdminText").innerText = `المدير: ${groupData.creatorName} | الأدمن: ${admins.length} شخص`;
+                document.getElementById("groupCover").style.backgroundImage = `url('${groupData.coverUrl}')`;
+
+                // FIX 2: إظهار زر الغلاف للأدمن أيضاً وليس فقط المنشئ
+                document.getElementById("uploadCoverBtn").style.display = isAdmin ? "inline-block" : "none";
+
+                listenToGroupSpecificData(groupId, groupData.name, groupData.creator, admins);
+            }
+        };
+
+        window.exitGroupView = () => {
+            currentActiveGroup = null;
+            currentActiveGroupData = null;
+            document.getElementById("singleGroupSection").classList.add("d-none");
+            document.getElementById("groupsGridSection").classList.remove("d-none");
+            if (unsubGroupPosts) unsubGroupPosts();
+        };
+
+        window.uploadGroupCover = async () => {
+            const fileInput = document.getElementById('groupCoverFileInput');
+            if (fileInput.files.length === 0) return;
+            const file = fileInput.files[0];
+            Swal.fire({ title: 'جاري رفع غلاف المشروع...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            try {
+                const storagePath = `covers/${currentActiveGroup}_${Date.now()}_${file.name}`;
+                const storageRef = ref(storage, storagePath);
+                await uploadBytes(storageRef, file);
+                const downloadURL = await getDownloadURL(storageRef);
+                await setDoc(doc(db, "groups", currentActiveGroup), { coverUrl: downloadURL }, { merge: true });
+                document.getElementById("groupCover").style.backgroundImage = `url('${downloadURL}')`;
+                Swal.fire('تم التحديث!', 'أصبح غلاف المشروع مرئياً لجميع المشتركين.', 'success');
+            } catch (err) { Swal.fire('خطأ في الرفع', err.message, 'error'); }
+        };
+
+        // ===== FIX 2: نظام الأدمن مع صلاحيات حذف المنشورات والأعضاء =====
+        function listenToGroupSpecificData(groupId, groupName, groupCreatorEmail, admins) {
+            if (unsubGroupPosts) unsubGroupPosts();
+            
+            let isCreator = (groupCreatorEmail === currentUserEmail);
+            let isAdmin = admins.includes(currentUserEmail);
+
+            const q = query(collection(db, "posts"), where("groupName", "==", groupName));
+            unsubGroupPosts = onSnapshot(q, (snapshot) => {
+                let container = document.getElementById("groupSpecificFeed");
+                container.innerHTML = "";
+                if (snapshot.empty) { 
+                    container.innerHTML = '<p class="text-muted text-center py-4">لم يتم نشر أي تقارير هندسية هنا بعد.</p>'; 
+                }
+                snapshot.forEach((docSnap) => {
+                    // FIX 2: الأدمن يمكنهم حذف المنشورات
+                    container.innerHTML += renderPostCard(docSnap.id, docSnap.data(), isAdmin);
+                });
+            });
+
+            onSnapshot(collection(db, "users"), (snapshot) => {
+                let list = document.getElementById("groupUsersList");
+                list.innerHTML = "";
+                snapshot.forEach((userSnap) => {
+                    let userData = userSnap.data();
+                    let isThisUserAdmin = admins.includes(userData.email);
+                    let isThisUserCreator = (userData.email === groupCreatorEmail);
+
+                    list.innerHTML += `<div class="list-group-item d-flex justify-content-between align-items-center rounded mb-2 shadow-sm border-0 bg-light">
+                        <div class="d-flex align-items-center">
+                            <img src="${userData.avatar}" class="profile-img-nav me-2" style="width:32px; height:32px; border: 2px solid #dee2e6;">
+                            <div>
+                                <h6 class="small fw-bold mb-0">${userData.name}</h6>
+                                <span class="badge bg-secondary" style="font-size:9px;">${userData.bio}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-1 align-items-center">
+                            ${isThisUserCreator ? '<span class="badge bg-success" style="font-size:9px;">منشئ الجروب</span>' : 
+                              isThisUserAdmin ? '<span class="admin-badge">أدمن</span>' : ''}
+                            ${isCreator && !isThisUserCreator ? `
+                                <button class="btn btn-sm ${isThisUserAdmin ? 'btn-warning' : 'btn-outline-success'} p-1" 
+                                    style="font-size:10px;"
+                                    onclick="${isThisUserAdmin ? `removeGroupAdmin('${groupId}', '${userData.email}', '${userData.name}')` : `assignGroupAdmin('${groupId}', '${userData.email}', '${userData.name}')`}"
+                                    title="${isThisUserAdmin ? 'إلغاء صلاحيات الأدمن' : 'تعيين كأدمن'}">
+                                    <i class="fa-solid ${isThisUserAdmin ? 'fa-user-minus' : 'fa-user-shield'}"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger p-1" style="font-size:10px;"
+                                    onclick="expelUserFromGroup('${groupId}', '${userData.email}', '${userData.name}')"
+                                    title="حذف من الجروب">
+                                    <i class="fa-solid fa-user-xmark"></i>
+                                </button>
+                            ` : isAdmin && !isCreator && !isThisUserCreator && !isThisUserAdmin ? `
+                                <button class="btn btn-sm btn-outline-danger p-1" style="font-size:10px;"
+                                    onclick="expelUserFromGroup('${groupId}', '${userData.email}', '${userData.name}')"
+                                    title="حذف من الجروب">
+                                    <i class="fa-solid fa-user-xmark"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>`;
+                });
+            });
+        }
+
+        // FIX 2: تعيين أدمن جديد
+        window.assignGroupAdmin = async (groupId, userEmail, userName) => {
+            Swal.fire({
+                title: `تعيين ${userName} كأدمن؟`,
+                text: 'سيكون لديه صلاحية حذف المنشورات وإدارة الأعضاء.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#1b5e20',
+                cancelButtonText: 'إلغاء',
+                confirmButtonText: 'نعم، تعيين كأدمن'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await updateDoc(doc(db, "groups", groupId), { admins: arrayUnion(userEmail) });
+                    Swal.fire('تم!', `تم تعيين ${userName} كأدمن للجروب بنجاح.`, 'success');
+                    enterGroupView(groupId);
+                }
+            });
+        };
+
+        // FIX 2: إلغاء صلاحيات الأدمن
+        window.removeGroupAdmin = async (groupId, userEmail, userName) => {
+            Swal.fire({
+                title: `إلغاء صلاحيات ${userName}؟`,
+                text: 'سيفقد صلاحيات الأدمن.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'إلغاء',
+                confirmButtonText: 'نعم، إلغاء الصلاحيات'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await updateDoc(doc(db, "groups", groupId), { admins: arrayRemove(userEmail) });
+                    Swal.fire('تم!', `تم إلغاء صلاحيات ${userName}.`, 'success');
+                    enterGroupView(groupId);
+                }
+            });
+        };
+
+        // FIX 2: حذف عضو من الجروب (تسجيل في مجموعة المحظورين)
+        window.expelUserFromGroup = async (groupId, userEmail, userName) => {
+            Swal.fire({
+                title: `حذف ${userName} من الجروب؟`,
+                text: 'سيتم منع هذا العضو من المشاركة في هذا المشروع.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'إلغاء',
+                confirmButtonText: 'نعم، حذف العضو'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await updateDoc(doc(db, "groups", groupId), { 
+                        bannedUsers: arrayUnion(userEmail),
+                        admins: arrayRemove(userEmail)
+                    });
+                    Swal.fire('تم!', `تم حذف ${userName} من هذا المشروع.`, 'success');
+                    enterGroupView(groupId);
+                }
+            });
+        };
+
+        window.createNewPost = async () => {
+            let group = document.getElementById("postGroupSelect").value;
+            let text = document.getElementById("postText").value;
+            if (!group) { Swal.fire('خطأ نظامي', 'الرجاء اختيار المجموعة المستهدفة بالنشر!', 'warning'); return; }
+            if (!text) return;
+            try {
+                await addDoc(collection(db, "posts"), {
+                    userName: currentUserName,
+                    userEmail: currentUserEmail,
+                    userAvatar: document.getElementById("navAvatar").src,
+                    groupName: group,
+                    text: text,
+                    createdAt: Date.now()
+                });
+                await addDoc(collection(db, "notifications"), {
+                    title: `تقرير هندسي جديد بجروب: ${group}`,
+                    body: `قام ${currentUserName} بنشر تحديث داخل الجروب.`,
+                    createdAt: Date.now()
+                });
+                document.getElementById("postText").value = "";
+            } catch (err) { Swal.fire('خطأ', err.message, 'error'); }
+        };
+
+        function listenToAllPosts() {
+            const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+            onSnapshot(q, (snapshot) => {
+                let feed = document.getElementById("feedContainer");
+                feed.innerHTML = "";
+                snapshot.forEach((docSnap) => {
+                    feed.innerHTML += renderPostCard(docSnap.id, docSnap.data(), false);
+                });
+            });
+        }
+
+        function renderPostCard(postId, post, isAdmin) {
+            setTimeout(() => { listenToComments(postId); }, 100);
+            return `<div class="card p-4 shadow-sm mb-4 bg-white border-0">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center">
+                        <img src="${post.userAvatar}" class="profile-img-nav me-2">
+                        <div><h6 class="fw-bold mb-0 text-dark">${post.userName}</h6><span class="text-muted small">قطاع الري: <b class="text-success">جروب ${post.groupName}</b></span></div>
+                    </div>
+                    ${isAdmin ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteSpecificPost('${postId}')"><i class="fa-solid fa-eraser"></i> حذف المنشور</button>` : ''}
+                </div>
+                <p class="text-dark" style="font-size:15px; line-height:1.6;">${post.text}</p>
+                <hr class="my-2">
+                <div class="input-group input-group-sm mb-3">
+                    <input type="text" id="commentInp_${postId}" class="form-control" placeholder="اكتب تعليقك الهندسي هنا...">
+                    <button class="btn btn-success" onclick="addCommentToPost('${postId}')">إرسال تعليق</button>
+                </div>
+                <div id="commentsBox_${postId}"></div>
+            </div>`;
+        }
+
+        window.deleteSpecificPost = async (id) => {
+            Swal.fire({
+                title: 'حذف المنشور؟',
+                text: 'هل تود حذف هذا المنشور نهائياً بصفتك أدمن الجروب؟',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'إلغاء',
+                confirmButtonText: 'نعم، حذف'
+            }).then(async (result) => {
+                if (result.isConfirmed) await deleteDoc(doc(db, "posts", id));
+            });
+        };
+
+        window.addCommentToPost = async (postId) => {
+            let input = document.getElementById(`commentInp_${postId}`);
+            if (!input.value) return;
+            try {
+                await addDoc(collection(db, "posts", postId, "comments"), {
+                    userName: currentUserName,
+                    userEmail: currentUserEmail,
+                    text: input.value,
+                    createdAt: Date.now()
+                });
+                input.value = "";
+            } catch (e) { console.error(e); }
+        };
+
+        function listenToComments(postId) {
+            let box = document.getElementById(`commentsBox_${postId}`);
+            if (!box) return;
+            const q = query(collection(db, "posts", postId, "comments"), orderBy("createdAt", "asc"));
+            onSnapshot(q, (snapshot) => {
+                box.innerHTML = "";
+                snapshot.forEach((docSnap) => {
+                    let com = docSnap.data();
+                    box.innerHTML += `<div class="comment-box small">
+                        <b class="text-success">${com.userName}:</b> <span class="text-dark">${com.text}</span>
+                    </div>`;
+                });
+            });
+        }
+
+        function listenToNotifications() {
+            const q = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
+            onSnapshot(q, (snapshot) => {
+                let container = document.getElementById("notificationsContainer");
+                let badge = document.getElementById("notifBadge");
+                container.innerHTML = "";
+                if (snapshot.empty) {
+                    container.innerHTML = '<p class="text-muted text-center py-4">لا توجد تنبيهات حية حالياً.</p>';
+                    badge.style.display = "none";
+                    return;
+                }
+                badge.innerText = snapshot.size;
+                badge.style.display = "inline-block";
+                snapshot.forEach((docSnap) => {
+                    let notif = docSnap.data();
+                    container.innerHTML += `<div class="list-group-item d-flex justify-content-between align-items-center border-start border-success border-4 mb-2 shadow-sm rounded bg-white p-3">
+                        <div>
+                            <h6 class="fw-bold text-dark mb-1"><i class="fa-solid fa-bullhorn text-success me-2"></i>${notif.title}</h6>
+                            <p class="mb-0 text-muted small">${notif.body}</p>
+                        </div>
+                    </div>`;
+                });
+            });
+        }
+
+        window.clearAllNotifications = async () => {
+            const snapshot = await getDocs(collection(db, "notifications"));
+            snapshot.forEach(async (docSnap) => { await deleteDoc(doc(db, "notifications", docSnap.id)); });
+            Swal.fire('تم التنظيف', 'تم إفراغ سجل الإشعارات بنجاح.', 'success');
+        };
+
+        window.createNewAIChatRoom = async () => {
+            Swal.fire({
+                title: 'عنوان المحادثة الجديدة',
+                input: 'text',
+                inputPlaceholder: 'مثال: حسابات فوهة KPT رقم 4',
+                showCancelButton: true,
+                confirmButtonText: 'إنشاء الغرفة الذكية',
+                cancelButtonText: 'إلغاء',
+                confirmButtonColor: '#1b5e20'
+            }).then(async (result) => {
+                if (result.value) {
+                    let roomName = result.value;
+                    let newRoomRef = await addDoc(collection(db, "users", currentUserEmail, "ai_rooms"), {
+                        name: roomName,
+                        createdAt: Date.now()
+                    });
+                    switchAIChatRoom(newRoomRef.id, roomName);
+                }
+            });
+        };
+
+        function listenToAIChatRooms() {
+            const q = query(collection(db, "users", currentUserEmail, "ai_rooms"), orderBy("createdAt", "desc"));
+            onSnapshot(q, (snapshot) => {
+                let sidebar = document.getElementById("aiSidebarRooms");
+                sidebar.innerHTML = "";
+                sidebar.innerHTML += `<div class="chat-tab-item ${currentActiveAIChatRoomId === 'default' ? 'active' : ''}" id="room_default" onclick="switchAIChatRoom('default', 'غرفة النقاش الرئيسية العامة')">
+                    <span><i class="fa-solid fa-message me-2"></i>النقاش العام الرئيسي</span>
+                </div>`;
+                snapshot.forEach((docSnap) => {
+                    let room = docSnap.data();
+                    sidebar.innerHTML += `<div class="chat-tab-item ${currentActiveAIChatRoomId === docSnap.id ? 'active' : ''}" id="room_${docSnap.id}" onclick="switchAIChatRoom('${docSnap.id}', '${room.name}')">
+                        <span class="text-truncate" style="max-width: 140px;"><i class="fa-solid fa-box-archive me-2"></i>${room.name}</span>
+                        <button class="btn btn-sm text-danger p-0 border-0" onclick="deleteAIChatRoom(event, '${docSnap.id}')"><i class="fa-solid fa-circle-xmark"></i></button>
+                    </div>`;
+                });
+            });
+        }
+
+        window.switchAIChatRoom = (roomId, roomName) => {
+            currentActiveAIChatRoomId = roomId;
+            document.getElementById("activeRoomLabel").innerText = roomName;
+            document.querySelectorAll('.chat-tab-item').forEach(el => el.classList.remove('active'));
+            let activeEl = document.getElementById(`room_${roomId}`);
+            if (activeEl) activeEl.classList.add('active');
+            listenToAIChatMessages(roomId);
+        };
+
+        window.deleteAIChatRoom = async (e, roomId) => {
+            e.stopPropagation();
+            if (confirm("هل أنت متأكد من مسح هذه المحادثة؟")) {
+                await deleteDoc(doc(db, "users", currentUserEmail, "ai_rooms", roomId));
+                if (currentActiveAIChatRoomId === roomId) {
+                    switchAIChatRoom('default', 'غرفة النقاش الرئيسية العامة');
+                }
+            }
+        };
+
+        function listenToAIChatMessages(roomId) {
+            let chatBox = document.getElementById("aiChatBox");
+            chatBox.innerHTML = '<p class="text-muted text-center small py-3">ابدأ النقاش الهندسي، وسيقوم المساعد الذكي بتحليل مسألتك.</p>';
+            const q = query(collection(db, "users", currentUserEmail, "ai_rooms", roomId, "messages"), orderBy("createdAt", "asc"));
+            onSnapshot(q, (snapshot) => {
+                chatBox.innerHTML = "";
+                snapshot.forEach((docSnap) => {
+                    let msg = docSnap.data();
+                    if (msg.sender === "user") {
+                        chatBox.innerHTML += `<div class="text-end my-2"><b>أنت:</b> <p class="bg-success text-white p-2 rounded d-inline-block shadow-sm mb-0">${msg.text}</p></div>`;
+                    } else {
+                        chatBox.innerHTML += `<div class="text-start my-2"><b>جيميناي AI:</b> <p class="bg-white text-dark p-2 rounded border d-inline-block shadow-sm mb-0">${msg.text}</p></div>`;
+                    }
+                });
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+        }
+
+        window.askGeminiAI = async () => {
+            let queryText = document.getElementById("aiInput").value;
+            if (!queryText) return;
+            document.getElementById("aiInput").value = "";
+            try {
+                await addDoc(collection(db, "users", currentUserEmail, "ai_rooms", currentActiveAIChatRoomId, "messages"), {
+                    sender: "user", text: queryText, createdAt: Date.now()
+                });
+                const GEMINI_API_KEY = "AIzaSyDuzMVGJ3HCrjGuY_52UgROWffR5rOvXYo";
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ "contents": [{ "parts": [{ "text": `أنت مستشار ومساعد هندسي بارع في إدارة أنظمة السنتر بيفوت والري الحديث لمنصة AgriLink. يخاطبك الآن: م/الفني ${currentUserName} ودوره هو ${currentUserRole}. أجب بدقة علمية عالية. السؤال: ${queryText}` }] }] })
+                });
+                let data = await response.json();
+                if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    let aiReply = data.candidates[0].content.parts[0].text;
+                    aiReply = aiReply.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                    await addDoc(collection(db, "users", currentUserEmail, "ai_rooms", currentActiveAIChatRoomId, "messages"), {
+                        sender: "ai", text: aiReply, createdAt: Date.now()
+                    });
+                }
+            } catch (error) {
+                console.error(error);
+                await addDoc(collection(db, "users", currentUserEmail, "ai_rooms", currentActiveAIChatRoomId, "messages"), {
+                    sender: "ai", text: `أهلاً بك م. ${currentUserName}، أواجه حملاً مؤقتاً، يرجى إعادة المحاولة!`, createdAt: Date.now()
+                });
+            }
+        };
+
+        // ===== FIX 3: جميع المستخدمين في تاب مستقل + عرض مبسط في الملف الشخصي =====
+        function listenToAllUsers() {
+            onSnapshot(collection(db, "users"), (snapshot) => {
+                let container = document.getElementById("allUsersContainer");
+                let profilePreview = document.getElementById("profileUsersPreview");
+                container.innerHTML = "";
+                if (profilePreview) profilePreview.innerHTML = "";
+                
+                snapshot.forEach((docSnap) => {
+                    let u = docSnap.data();
+                    if (u.email === currentUserEmail) return;
+
+                    let card = `<div class="col-md-6 mb-3">
+                        <div class="card p-3 user-card-grid bg-white">
+                            <div class="d-flex align-items-center mb-3">
+                                <img src="${u.avatar}" class="profile-img-nav me-3" style="width:50px; height:50px; border: 2px solid #dee2e6;">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0">${u.name}</h6>
+                                    <span class="text-success small fw-bold"><i class="fa-solid fa-briefcase me-1"></i>${u.bio}</span>
+                                    <div class="text-muted small" style="font-size:11px;">هاتف: ${u.phone || 'غير مدرج'}</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 justify-content-end flex-wrap">
+                                <button class="btn btn-sm btn-outline-success" onclick="openDirectChat('${u.email}', '${u.name}')"><i class="fa-solid fa-comments"></i> رسالة</button>
+                                <button class="btn btn-sm btn-outline-primary" onclick="simulateCall('${u.name}', 'صوتية')"><i class="fa-solid fa-phone"></i> صوت</button>
+                                <button class="btn btn-sm btn-outline-info text-dark" onclick="simulateCall('${u.name}', 'فيديو')"><i class="fa-solid fa-video"></i> فيديو</button>
+                            </div>
+                        </div>
+                    </div>`;
+                    
+                    container.innerHTML += card;
+                    if (profilePreview) profilePreview.innerHTML += card;
+                });
+            });
+        }
+
+        window.simulateCall = (name, type) => {
+            Swal.fire({
+                title: `الاتصال بـ ${name}`,
+                html: `<div class="text-center py-3">
+                    <i class="fa-solid ${type === 'فيديو' ? 'fa-video' : 'fa-phone'} fa-4x text-success mb-3 fa-beat"></i>
+                    <p>جاري بدء مكالمة <b>${type}</b> مع ${name}...</p>
+                    <p class="text-muted small">ميزة الاتصال الحقيقي تتطلب تكامل WebRTC</p>
+                </div>`,
+                timer: 4000,
+                showConfirmButton: true,
+                confirmButtonText: 'إنهاء المكالمة',
+                confirmButtonColor: '#dc3545'
+            });
+        };
+
+        // ===== FIX 3: الرسائل تُحفظ ولا تُمسح إلا يدوياً =====
+        window.openDirectChat = (targetEmail, targetName) => {
+            targetChatUserEmail = targetEmail;
+            currentChatRoomId = currentUserEmail < targetEmail ? `${currentUserEmail}_${targetEmail}` : `${targetEmail}_${currentUserEmail}`;
+            document.getElementById("chatModalTitle").innerText = `مراسلة فورية 🔒 | ${targetName}`;
+            
+            let myModal = new bootstrap.Modal(document.getElementById('chatModal'));
+            myModal.show();
+
+            // الرسائل محفوظة في Firestore ولا تُمسح تلقائياً
+            const q = query(collection(db, "chats", currentChatRoomId, "messages"), orderBy("createdAt", "asc"));
+            onSnapshot(q, (snapshot) => {
+                let box = document.getElementById("directChatBox");
+                box.innerHTML = "";
+                if (snapshot.empty) {
+                    box.innerHTML = '<p class="text-muted text-center small py-4">لا توجد رسائل سابقة. ابدأ المحادثة الآن.</p>';
+                    return;
+                }
+                snapshot.forEach((docSnap) => {
+                    let m = docSnap.data();
+                    if (m.sender === currentUserEmail) {
+                        box.innerHTML += `<div class="text-end my-1">
+                            <div class="msg-bubble">
+                                <p class="bg-success text-white p-2 rounded d-inline-block small mb-0">${m.text}</p>
+                                <button class="delete-msg-btn" onclick="deleteMessage('${docSnap.id}')" title="حذف الرسالة">✕</button>
+                            </div>
+                        </div>`;
+                    } else {
+                        box.innerHTML += `<div class="text-start my-1">
+                            <b class="d-block small text-muted">${targetName}</b>
+                            <p class="bg-white text-dark p-2 rounded border d-inline-block small mb-0">${m.text}</p>
+                        </div>`;
+                    }
+                });
+                box.scrollTop = box.scrollHeight;
+            });
+        };
+
+        // FIX 3: حذف رسالة واحدة يدوياً
+        window.deleteMessage = async (msgId) => {
+            if (confirm('هل تريد حذف هذه الرسالة؟')) {
+                await deleteDoc(doc(db, "chats", currentChatRoomId, "messages", msgId));
+            }
+        };
+
+        // FIX 3: مسح كل الرسائل يدوياً
+        window.clearChatMessages = async () => {
+            Swal.fire({
+                title: 'مسح جميع الرسائل؟',
+                text: 'سيتم حذف كل رسائل هذه المحادثة نهائياً. هل أنت متأكد؟',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'إلغاء',
+                confirmButtonText: 'نعم، مسح الكل'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const snapshot = await getDocs(collection(db, "chats", currentChatRoomId, "messages"));
+                    snapshot.forEach(async (docSnap) => { await deleteDoc(doc(db, "chats", currentChatRoomId, "messages", docSnap.id)); });
+                    Swal.fire('تم!', 'تم مسح جميع الرسائل.', 'success');
+                }
+            });
+        };
+
+        window.sendDirectMessage = async () => {
+            let input = document.getElementById("directChatInput");
+            if (!input.value || !targetChatUserEmail) return;
+            try {
+                await addDoc(collection(db, "chats", currentChatRoomId, "messages"), {
+                    sender: currentUserEmail,
+                    text: input.value,
+                    createdAt: Date.now()
+                });
+                input.value = "";
+            } catch (e) { console.error(e); }
+        };
+
+        // ===== FIX 1: switchTab مع حفظ التاب في sessionStorage =====
+        function switchTabInternal(tabId) {
+            document.querySelectorAll('.app-content').forEach(el => el.classList.remove('active'));
+            let target = document.getElementById(tabId);
+            if (target) target.classList.add('active');
+        }
+
+        window.switchTab = (tabId, element) => {
+            switchTabInternal(tabId);
+            
+            if (element) {
+                document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+                element.classList.add('active');
+            } else {
+                document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+            }
+            
+            // FIX 1: حفظ التاب الحالي
+            saveCurrentTab(tabId);
+            
+            if (tabId !== 'groupsTab') {
+                exitGroupView();
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
