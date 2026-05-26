@@ -232,16 +232,28 @@
 
 <!-- INCOMING CALL OVERLAY -->
 <div class="call-overlay" id="callOverlay">
-    <p class="text-white-50 small" id="callStatus">مكالمة واردة</p>
-    <img id="callAvatar" src="" class="call-avatar-ring" style="width:120px;height:120px;object-fit:cover;">
-    <h3 class="text-white fw-bold mb-0" id="callName"></h3>
-    <p class="text-white-50" id="callType"></p>
-    <div class="d-flex gap-4 mt-2">
-        <button class="call-btn" id="callAcceptBtn" style="background:#22c55e;" onclick="acceptCall()"><i class="fa-solid fa-phone text-white"></i></button>
-        <button class="call-btn" style="background:#ef4444;" onclick="rejectCall()"><i class="fa-solid fa-phone-slash text-white"></i></button>
+  <div style="background:linear-gradient(160deg,#0f2027,#203a43,#1a3a4a);border-radius:28px;padding:40px 32px 32px;text-align:center;min-width:300px;max-width:360px;position:relative;box-shadow:0 40px 100px rgba(0,0,0,0.7);">
+    <div style="letter-spacing:3px;font-size:10px;text-transform:uppercase;color:#60a5fa;margin-bottom:20px;font-weight:600;" id="callType">VOICE CALL</div>
+    <div style="position:relative;display:inline-block;margin-bottom:20px;">
+      <span style="position:absolute;inset:-12px;border-radius:50%;border:3px solid rgba(34,197,94,0.5);animation:callRingAnim 1.8s ease-out infinite;"></span>
+      <span style="position:absolute;inset:-24px;border-radius:50%;border:2px solid rgba(34,197,94,0.3);animation:callRingAnim 1.8s ease-out 0.6s infinite;"></span>
+      <img id="callAvatar" src="" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.25);position:relative;z-index:1;">
+    </div>
+    <h3 class="text-white fw-bold mb-1" id="callName" style="font-family:'Cairo',sans-serif;font-size:22px;"></h3>
+    <p style="color:#94a3b8;font-size:13px;margin-bottom:28px;font-family:'Cairo',sans-serif;" id="callStatus">جاري الاتصال...</p>
+    <div class="d-flex gap-5 justify-content-center align-items-center">
+      <div style="text-align:center;">
+        <button style="background:linear-gradient(135deg,#ef4444,#dc2626);width:64px;height:64px;border-radius:50%;border:none;cursor:pointer;box-shadow:0 0 20px rgba(239,68,68,0.5);display:flex;align-items:center;justify-content:center;" onclick="rejectCall()"><i class="fa-solid fa-phone-slash text-white fa-lg"></i></button>
+        <div style="font-size:11px;color:#94a3b8;margin-top:8px;font-family:'Cairo',sans-serif;">إنهاء</div>
+      </div>
+      <div style="text-align:center;" id="callAcceptWrapper">
+        <button id="callAcceptBtn" style="background:linear-gradient(135deg,#22c55e,#16a34a);width:64px;height:64px;border-radius:50%;border:none;cursor:pointer;box-shadow:0 0 24px rgba(34,197,94,0.6);display:flex;align-items:center;justify-content:center;animation:acceptPulse 1.5s infinite;" onclick="acceptCall()"><i class="fa-solid fa-phone text-white fa-lg"></i></button>
+        <div style="font-size:11px;color:#94a3b8;margin-top:8px;font-family:'Cairo',sans-serif;">قبول</div>
+      </div>
     </div>
     <audio id="remoteAudio" autoplay></audio>
     <audio id="localAudio" autoplay muted></audio>
+  </div>
 </div>
 
 <!-- ACTIVE CALL UI -->
@@ -291,6 +303,7 @@
                             </div>
                             <button type="submit" class="btn btn-agri w-100 fw-bold py-2 mb-3" style="font-size:15px;"><i class="fa-solid fa-right-to-bracket me-2"></i>تسجيل الدخول الآمن</button>
                         </form>
+                        <div class="text-center mb-2"><span class="small fw-bold" style="color:var(--primary-mid);cursor:pointer;" onclick="handleForgotPassword()"><i class="fa-solid fa-key me-1"></i>نسيت كلمة المرور؟</span></div>
                         <div class="text-center"><p class="small text-muted mb-0">ليس لديك حساب؟ <span class="fw-bold" style="color:var(--primary-mid);cursor:pointer;" onclick="toggleAuth(true)">إنشاء حساب جديد</span></p></div>
                     </div>
                     <div id="registerSection" class="d-none">
@@ -303,7 +316,8 @@
                             <div class="mb-3"><label class="form-label">البريد الإلكتروني</label><input type="email" id="regEmail" class="form-control" placeholder="eng.karim@gmail.com" required></div>
                             <div class="mb-3">
                                 <label class="form-label">الدور الوظيفي</label>
-                                <select id="regRole" class="form-select" required>
+                                <select id="regRole" class="form-select" required onchange="onRoleChange(this.value)">
+                                    <option value="مهندس ري محوري" selected>مهندس ري محوري</option>
                                     <option value="مدير مشروع">مدير مشروع</option>
                                     <option value="مهندس ري محوري">مهندس ري محوري</option>
                                     <option value="استشاري هندسي">استشاري هندسي</option>
@@ -312,7 +326,7 @@
                                 </select>
                             </div>
                             <div class="mb-3"><label class="form-label">رقم الهاتف</label><input type="tel" id="regPhone" class="form-control" placeholder="010XXXXXXXX" required></div>
-                            <div class="mb-4"><label class="form-label">كلمة المرور</label><input type="password" id="regPass" class="form-control" placeholder="•••••••• (6 أحرف على الأقل)" required></div>
+                            <div id="secretKeyBox" class="mb-3" style="display:none;"><label class="form-label fw-bold" style="color:#dc2626;"><i class="fa-solid fa-shield-halved me-1"></i>المفتاح السري لمدير المشروع</label><input type="password" id="regSecretKey" class="form-control" placeholder="أدخل المفتاح السري..."><small class="text-muted">مطلوب فقط لدور مدير المشروع</small></div><div class="mb-4"><label class="form-label">كلمة المرور</label><input type="password" id="regPass" class="form-control" placeholder="•••••••• (6 أحرف على الأقل)" required></div>
                             <button type="submit" class="btn btn-agri w-100 fw-bold py-2 mb-3" style="font-size:15px;"><i class="fa-solid fa-check-circle me-2"></i>تأكيد وإنشاء الحساب</button>
                         </form>
                         <div class="text-center"><p class="small text-muted mb-0">لديك حساب؟ <span class="fw-bold" style="color:var(--primary-mid);cursor:pointer;" onclick="toggleAuth(false)">تسجيل الدخول</span></p></div>
@@ -464,7 +478,7 @@
                     <div class="card p-4">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h5 class="fw-bold mb-0"><i class="fa-solid fa-bell text-success me-2"></i>سجل الإشعارات</h5>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="clearAllNotifications()" style="border-radius:8px;"><i class="fa-solid fa-trash me-1"></i>مسح الكل</button>
+                            <button class="btn btn-sm btn-outline-success" onclick="markAllNotificationsRead()" style="border-radius:8px;"><i class="fa-solid fa-check-double me-1"></i>تمت مشاهدة الكل</button>
                         </div>
                         <div id="notificationsContainer"><div class="text-center py-5 text-muted"><i class="fa-solid fa-bell-slash fa-3x mb-3 opacity-25"></i><p>لا توجد إشعارات.</p></div></div>
                     </div>
@@ -706,9 +720,8 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, setDoc, doc, getDoc, getDocs, query, orderBy, onSnapshot, deleteDoc, where, updateDoc, arrayUnion, arrayRemove, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+import { getFirestore, collection, addDoc, setDoc, doc, getDoc, getDocs, query, orderBy, onSnapshot, deleteDoc, where, updateDoc, arrayUnion, arrayRemove, limit , writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDDXq4XJfdR4lG40kq4MvosgmXv8xBd3CM",
@@ -721,7 +734,31 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const storage = getStorage(app);
+
+// ======= BASE64 IMAGE HELPER =======
+async function fileToBase64(file, maxSize=900, quality=0.78) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = e => {
+            const img = new Image();
+            img.onerror = reject;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let w = img.width, h = img.height;
+                if (w > maxSize || h > maxSize) {
+                    if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+                    else { w = Math.round(w * maxSize / h); h = maxSize; }
+                }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
 
 // ======= GROQ API KEY =======
 // *** ضع مفتاح GROQ هنا بين علامتي الاقتباس ***
@@ -734,6 +771,7 @@ let currentActiveAIChatRoomId = "default";
 let targetChatUserEmail = "", currentChatRoomId = "";
 let unsubGroupPosts = null, unsubChatListener = null;
 let allUsersCache = {}, allGroupsCache = {};
+let allPostsData = [];
 let notifUnreadCount = 0, chatUnreadCount = 0;
 let currentMentionInput = null;
 let viewedPostsThisSession = new Set(); // FIX: unique views
@@ -781,6 +819,7 @@ onAuthStateChanged(auth, async (user) => {
                 listenToIncomingCalls();
                 loadTodayAchievements();
                 restoreTab();
+                if (currentUserRole === 'مدير مشروع') setTimeout(() => autoJoinAllGroupsAsPM(), 3000);
             } else {
                 showAuthScreens();
                 Swal.fire({ title:'استكمال البيانات', text:'بياناتك الشخصية ناقصة.', icon:'warning', confirmButtonColor:'#1b5e20' }).then(() => toggleAuth(true));
@@ -796,6 +835,10 @@ window.toggleAuth = (r) => {
     document.getElementById('loginSection').classList.toggle('d-none', r);
     document.getElementById('registerSection').classList.toggle('d-none', !r);
 };
+window.onRoleChange = (val) => {
+    const box = document.getElementById('secretKeyBox');
+    if (box) box.style.display = val === 'مدير مشروع' ? 'block' : 'none';
+};
 window.handleRegister = async (e) => {
     e.preventDefault();
     const name = document.getElementById('regName').value.trim();
@@ -803,6 +846,10 @@ window.handleRegister = async (e) => {
     const role = document.getElementById('regRole').value;
     const phone = document.getElementById('regPhone').value.trim();
     const pass = document.getElementById('regPass').value;
+    if (role === 'مدير مشروع') {
+        const sk = document.getElementById('regSecretKey').value;
+        if (sk !== 'Abcd@1234') { Swal.fire('خطأ','المفتاح السري لمدير المشروع غير صحيح','error'); return; }
+    }
     if (pass.length < 6) { Swal.fire('خطأ','كلمة المرور يجب أن تكون 6 أحرف على الأقل','error'); return; }
     Swal.fire({ title:'جاري إنشاء الحساب...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
     try {
@@ -825,7 +872,65 @@ window.handleLogin = async (e) => {
         Swal.fire('خطأ', msgs[err.code]||('كود: '+err.code), 'error');
     }
 };
+let _addMemberTargetGroupId = '', _addMemberTargetGroupName = '';
+window.openAddMemberModal = (gid, gName) => {
+    _addMemberTargetGroupId = gid; _addMemberTargetGroupName = gName;
+    const list = document.getElementById('addMemberList');
+    list.innerHTML = '';
+    Object.values(allUsersCache).forEach(u => {
+        list.innerHTML += `<div class="d-flex align-items-center justify-content-between p-2 rounded mb-1" style="background:#f8faff;" data-name="${u.name.toLowerCase()}" data-email="${u.email}">
+            <div class="d-flex align-items-center gap-2"><img src="${u.avatar}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;"><div><div class="fw-bold" style="font-size:13px;">${u.name}</div><div class="text-muted" style="font-size:11px;">${u.bio}</div></div></div>
+            <button class="btn btn-sm btn-success" onclick="addMemberToGroup('${gid}','${u.email}','${u.name}')" style="border-radius:8px;font-family:Cairo,sans-serif;"><i class="fa-solid fa-plus me-1"></i>إضافة</button>
+        </div>`;
+    });
+    new bootstrap.Modal(document.getElementById('addMemberModal')).show();
+};
+window.filterAddMemberList = () => {
+    const q = document.getElementById('addMemberSearch').value.toLowerCase();
+    document.querySelectorAll('#addMemberList > div').forEach(el => {
+        el.style.display = (el.dataset.name.includes(q)||el.dataset.email.includes(q)) ? '' : 'none';
+    });
+};
+window.addMemberToGroup = async (gid, email, name) => {
+    try {
+        await updateDoc(doc(db,"groups",gid), { members:arrayUnion(email) });
+        Swal.fire({toast:true,position:'bottom-end',icon:'success',title:`تمت إضافة ${name}`,showConfirmButton:false,timer:2000});
+    } catch(e) { Swal.fire('خطأ','فشلت الإضافة','error'); }
+};
+window.leaveCurrentGroup = async () => {
+    if (!currentActiveGroup) return;
+    const r = await Swal.fire({ title:'مغادرة الجروب؟', text:'بعد المغادرة لن تتمكن من الانضمام مرة أخرى.', icon:'warning', showCancelButton:true, confirmButtonColor:'#d33', cancelButtonText:'إلغاء', confirmButtonText:'مغادرة' });
+    if (!r.isConfirmed) return;
+    try {
+        await updateDoc(doc(db,"groups",currentActiveGroup), {
+            members: arrayRemove(currentUserEmail),
+            admins: arrayRemove(currentUserEmail),
+            bannedMembers: arrayUnion(currentUserEmail)
+        });
+        Swal.fire({ toast:true, position:'top-end', icon:'info', title:'غادرت الجروب', showConfirmButton:false, timer:2000 });
+        exitGroupView();
+    } catch(e) { Swal.fire('خطأ', e.message, 'error'); }
+};
 window.handleLogout = () => { sessionStorage.removeItem('agri_tab'); signOut(auth).then(()=>location.reload()); };
+window.handleForgotPassword = async () => {
+    const r = await Swal.fire({ title:'استعادة كلمة المرور', input:'email', inputPlaceholder:'name@company.com', showCancelButton:true, confirmButtonColor:'#1b5e20', cancelButtonText:'إلغاء', confirmButtonText:'إرسال الرابط', preConfirm:(v)=>{ if(!v){ Swal.showValidationMessage('أدخل البريد'); return false; } return v; } });
+    if (!r.value) return;
+    try { await sendPasswordResetEmail(auth, r.value); Swal.fire({ title:'تم الإرسال!', html:`<p>تم إرسال رابط إعادة التعيين إلى <b>${r.value}</b></p>`, icon:'success', confirmButtonColor:'#1b5e20' }); }
+    catch(err) { const m={'auth/user-not-found':'لا يوجد حساب بهذا البريد.','auth/invalid-email':'صيغة البريد خاطئة.'}; Swal.fire('خطأ',m[err.code]||err.message,'error'); }
+};
+async function autoJoinAllGroupsAsPM() {
+    try {
+        const snap = await getDocs(collection(db,"groups"));
+        for (const gDoc of snap.docs) {
+            const g = gDoc.data();
+            const members = g.members||[];
+            const admins = g.admins||[g.creator];
+            if (!members.includes(currentUserEmail) && !admins.includes(currentUserEmail) && g.creator !== currentUserEmail) {
+                await updateDoc(doc(db,"groups",gDoc.id), { members:arrayUnion(currentUserEmail) });
+            }
+        }
+    } catch(e) {}
+}
 
 // ======= PROFILE =======
 window.uploadProfileAvatar = async () => {
@@ -835,17 +940,19 @@ window.uploadProfileAvatar = async () => {
     if (file.size > 3*1024*1024) { Swal.fire('الملف كبير','يرجى اختيار صورة أصغر من 3MB','warning'); return; }
     Swal.fire({ title:'جاري رفع صورتك...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
     try {
-        const storagePath = `avatars/${currentUserEmail.replace(/[@.]/g,'_')}.jpg`;
-        const storageRef = ref(storage, storagePath);
-        await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(storageRef);
+        const downloadURL = await fileToBase64(file, 400, 0.80);
         await setDoc(doc(db,"users",currentUserEmail), { avatar:downloadURL }, { merge:true });
         document.getElementById("profilePreview").src = downloadURL;
         document.getElementById("navAvatar").src = downloadURL;
         document.getElementById("postAuthorAvatar").src = downloadURL;
         if (allUsersCache[currentUserEmail]) allUsersCache[currentUserEmail].avatar = downloadURL;
+        // تحديث الصورة في جميع المنشورات السابقة
+        const postsSnap = await getDocs(query(collection(db,"posts"), where("userEmail","==",currentUserEmail)));
+        const updatePromises = [];
+        postsSnap.forEach(pDoc => updatePromises.push(updateDoc(doc(db,"posts",pDoc.id), { userAvatar: downloadURL })));
+        await Promise.all(updatePromises);
         fileInput.value = "";
-        Swal.fire({ toast:true, position:'top-end', icon:'success', title:'تم تحديث الصورة!', showConfirmButton:false, timer:2000 });
+        Swal.fire({ toast:true, position:'top-end', icon:'success', title:'تم تحديث الصورة في كل مكان!', showConfirmButton:false, timer:2000 });
     } catch(err) {
         console.error("Avatar upload error:", err);
         Swal.fire('فشل الرفع', `${err.code||err.message}`, 'error');
@@ -900,7 +1007,7 @@ function listenToGroups() {
         allGroupsCache = {};
         snap.forEach(d => {
             const g = d.data(); const admins = g.admins||[g.creator];
-            const isAdmin = admins.includes(currentUserEmail);
+            const isAdmin = currentUserRole==='مدير مشروع'||admins.includes(currentUserEmail)||creator===currentUserEmail;
             const isMember = (g.members||[]).includes(currentUserEmail) || g.creator===currentUserEmail;
             allGroupsCache[d.id] = { ...g, id:d.id };
             container.innerHTML += `
@@ -920,12 +1027,14 @@ function listenToGroups() {
                     </div>
                     <div class="d-flex gap-1">
                         ${!isMember ? `<button class="btn btn-sm btn-success" onclick="requestJoinGroup('${d.id}','${g.name}')" style="border-radius:8px;font-size:12px;font-family:'Cairo',sans-serif;">انضمام</button>` : ''}
-                        ${g.creator===currentUserEmail ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('${d.id}')" style="border-radius:8px;"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        ${(g.creator===currentUserEmail||currentUserRole==='مدير مشروع') ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('${d.id}')" style="border-radius:8px;"><i class="fa-solid fa-trash"></i></button>` : ''}
                     </div>
                 </div>
             </div>`;
             if (isMember) select.innerHTML += `<option value="${g.name}">${g.name}</option>`;
         });
+        // إعادة رسم الفيد عند أي تغيير في العضويات
+        renderFeed();
     });
 }
 
@@ -934,17 +1043,28 @@ window.searchGroups = (val) => {
     if (!val.trim()) { results.innerHTML=''; return; }
     const matches = Object.values(allGroupsCache).filter(g => g.name.toLowerCase().includes(val.toLowerCase()));
     if (!matches.length) { results.innerHTML='<p class="text-muted small">لا توجد نتائج</p>'; return; }
-    results.innerHTML = matches.map(g => `
-        <div class="browsable-group d-flex justify-content-between align-items-center">
-            <div>
-                <div class="fw-bold" style="font-size:13px;">${g.name}</div>
-                <div class="text-muted" style="font-size:11px;">المسؤول: ${g.creatorName}</div>
-            </div>
-            <button class="btn btn-sm btn-success" onclick="enterGroupView('${g.id}')" style="border-radius:8px;font-size:12px;font-family:'Cairo',sans-serif;">دخول</button>
-        </div>`).join('');
+    results.innerHTML = matches.map(g => {
+        const isMemberSG = (g.members||[]).includes(currentUserEmail)||g.creator===currentUserEmail||(g.admins||[]).includes(currentUserEmail)||currentUserRole==='مدير مشروع';
+        const isBannedSG = !(g.creator===currentUserEmail||currentUserRole==='مدير مشروع') && (g.bannedMembers||[]).includes(currentUserEmail);
+        const requested = !isBannedSG && (g.joinRequests||[]).includes(currentUserEmail);
+        const btn = isBannedSG ? `<span class="badge bg-secondary px-3" style="font-size:11px;"><i class="fa-solid fa-ban me-1"></i>مغادر</span>` : isMemberSG
+            ? `<button class="btn btn-sm btn-success" onclick="enterGroupView('${g.id}')" style="border-radius:8px;font-size:12px;font-family:'Cairo',sans-serif;"><i class="fa-solid fa-door-open me-1"></i>دخول</button>`
+            : requested
+                ? `<button class="btn btn-sm btn-outline-secondary" disabled style="border-radius:8px;font-size:11px;">في انتظار الموافقة</button>`
+                : `<button class="btn btn-sm btn-warning" onclick="requestJoinGroup('${g.id}','${g.name}')" style="border-radius:8px;font-size:12px;font-family:'Cairo',sans-serif;color:white;"><i class="fa-solid fa-user-plus me-1"></i>انضمام</button>`;
+        return `<div class="browsable-group d-flex justify-content-between align-items-center">
+            <div><div class="fw-bold" style="font-size:13px;">${g.name}</div><div class="text-muted" style="font-size:11px;">المسؤول: ${g.creatorName}</div></div>
+            ${btn}</div>`;
+    }).join('');
 };
 
 window.requestJoinGroup = async (gid, gName) => {
+    // Check if user is banned from this group
+    const gSnap = await getDoc(doc(db,"groups",gid));
+    if (gSnap.exists() && (gSnap.data().bannedMembers||[]).includes(currentUserEmail)) {
+        Swal.fire('تنبيه', 'لقد غادرت هذا الجروب ولا يمكنك الانضمام مجدداً.', 'warning');
+        return;
+    }
     const g = allGroupsCache[gid];
     if (!g) return;
     const requests = g.joinRequests||[];
@@ -965,20 +1085,26 @@ window.requestJoinGroup = async (gid, gName) => {
     Swal.fire({ toast:true, position:'top-end', icon:'info', title:'تم إرسال طلب الانضمام!', showConfirmButton:false, timer:2500 });
 };
 
-window.approveJoinRequest = async (gid, email, name) => {
+window.approveJoinRequest = async (gid, email, name, notifId) => {
+    const gData = allGroupsCache[gid];
+    const gName = gData ? gData.name : 'المجموعة';
     await updateDoc(doc(db,"groups",gid), {
         joinRequests:arrayRemove(email),
         members:arrayUnion(email)
     });
     await addDoc(collection(db,"users",email,"notifications"), {
         title:`تمت الموافقة على انضمامك`,
-        body:`تمت الموافقة على انضمامك إلى المجموعة.`,
-        type:'join_approved', read:false, createdAt:Date.now()
+        body:`تمت الموافقة على انضمامك إلى مجموعة ${gName}.`,
+        type:'join_approved', groupId:gid, gName, read:false, createdAt:Date.now()
     });
-    Swal.fire({ toast:true, position:'top-end', icon:'success', title:`تمت إضافة ${name}`, showConfirmButton:false, timer:2000 });
+    // حذف إشعار طلب الانضمام فور الموافقة
+    if (notifId) await deleteDoc(doc(db,"users",currentUserEmail,"notifications",notifId));
+    Swal.fire({ icon:'success', title:`تم القبول`, text:`تم قبول طلب انضمام ${name} إلى جروب ${gName}`, confirmButtonColor:'#1b5e20' });
 };
-window.rejectJoinRequest = async (gid, email) => {
+window.rejectJoinRequest = async (gid, email, notifId) => {
     await updateDoc(doc(db,"groups",gid), { joinRequests:arrayRemove(email) });
+    // حذف إشعار طلب الانضمام فور الرفض
+    if (notifId) await deleteDoc(doc(db,"users",currentUserEmail,"notifications",notifId));
     Swal.fire({ toast:true, position:'top-end', icon:'info', title:'تم رفض الطلب', showConfirmButton:false, timer:1500 });
 };
 
@@ -1027,16 +1153,32 @@ window.enterGroupView = async (gid) => {
     const gDoc = await getDoc(doc(db,"groups",gid));
     if (gDoc.exists()) {
         const g = gDoc.data(); const admins = g.admins||[g.creator];
-        const isAdmin = admins.includes(currentUserEmail);
-        currentActiveGroupName = g.name;
-        currentActiveGroupAdmins = admins;
+        const isPM = currentUserRole === 'مدير مشروع';
+        const isBanned = !(isPM||g.creator===currentUserEmail) && (g.bannedMembers||[]).includes(currentUserEmail);
+        const isMember = !isBanned && (isPM||(g.members||[]).includes(currentUserEmail)||g.creator===currentUserEmail||admins.includes(currentUserEmail));
+        const alreadyRequested = !isBanned && (g.joinRequests||[]).includes(currentUserEmail);
+        const isAdmin = isPM||admins.includes(currentUserEmail)||g.creator===currentUserEmail;
+        currentActiveGroupName = g.name; currentActiveGroupAdmins = admins;
         document.getElementById("singleGroupName").innerText = `مشروع: ${g.name}`;
-        document.getElementById("singleGroupAdminText").innerText = `المدير: ${g.creatorName} | أدمن: ${admins.length}`;
+        document.getElementById("singleGroupAdminText").innerText = `المدير: ${g.creatorName} | أعضاء: ${(g.members||[]).length+1}`;
         document.getElementById("groupCover").style.backgroundImage = `url('${g.coverUrl}')`;
         document.getElementById("uploadCoverBtn").style.display = isAdmin ? "inline-block" : "none";
         document.getElementById("inviteLinkBtn").style.display = isAdmin ? "inline-block" : "none";
+        if (!isMember) {
+            document.getElementById("groupPostFormContainer").style.display = "none";
+            document.getElementById("groupSpecificFeed").innerHTML = `<div class="text-center py-5"><i class="fa-solid fa-lock fa-3x mb-3" style="color:var(--primary-mid);opacity:0.4;"></i><h5 class="fw-bold text-muted">محتوى خاص</h5><p class="text-muted small mb-3">انضم للجروب للاطلاع على المنشورات</p>${alreadyRequested ? '<span class="badge px-4 py-2" style="background:var(--accent-light);color:var(--primary-mid);border-radius:12px;font-family:Cairo,sans-serif;"><i class="fa-solid fa-clock me-1"></i>طلبك قيد المراجعة</span>' : `<button class="btn btn-success fw-bold px-4" onclick="requestJoinGroup('${gid}','${g.name}')" style="border-radius:12px;font-family:Cairo,sans-serif;"><i class="fa-solid fa-user-plus me-2"></i>طلب الانضمام</button>`}</div>`;
+            document.getElementById("groupUsersList").innerHTML = "";
+            document.getElementById("inGroupJoinRequests").style.display = "none";
+            return;
+        }
         document.getElementById("groupPostFormContainer").style.display = "block";
-        listenToGroupSpecificData(gid, g.name, g.creator, admins, g.joinRequests||[]);
+        // Show leave button only if member (not creator, not PM)
+        const leaveBtn = document.getElementById("leaveGroupBtn");
+        if (leaveBtn) {
+            const canLeave = isMember && g.creator !== currentUserEmail && currentUserRole !== 'مدير مشروع';
+            leaveBtn.style.display = canLeave ? 'inline-block' : 'none';
+        }
+        listenToGroupSpecificData(gid, g.name, g.creator, admins, g.joinRequests||[], g.members||[]);
     }
 };
 window.exitGroupView = () => {
@@ -1052,16 +1194,14 @@ window.uploadGroupCover = async () => {
     if (!file) return;
     Swal.fire({ title:'جاري الرفع...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
     try {
-        const path = `covers/${currentActiveGroup}_${Date.now()}`;
-        await uploadBytes(ref(storage, path), file);
-        const url = await getDownloadURL(ref(storage, path));
+        const url = await fileToBase64(file, 1200, 0.80);
         await setDoc(doc(db,"groups",currentActiveGroup), { coverUrl:url }, { merge:true });
         document.getElementById("groupCover").style.backgroundImage = `url('${url}')`;
         Swal.fire({ toast:true, position:'top-end', icon:'success', title:'تم تحديث الغلاف', showConfirmButton:false, timer:2000 });
     } catch(err) { Swal.fire('خطأ',err.message,'error'); }
 };
 
-function listenToGroupSpecificData(gid, gName, creator, admins, joinRequests) {
+function listenToGroupSpecificData(gid, gName, creator, admins, joinRequests, groupMembers) {
     if (unsubGroupPosts) unsubGroupPosts();
     const isAdmin = admins.includes(currentUserEmail);
     const isCreator = creator === currentUserEmail;
@@ -1071,34 +1211,28 @@ function listenToGroupSpecificData(gid, gName, creator, admins, joinRequests) {
         cont.innerHTML = snap.empty ? '<div class="text-center py-5 text-muted"><i class="fa-solid fa-inbox fa-3x mb-3 opacity-20"></i><p>لا توجد منشورات بعد.</p></div>' : "";
         snap.forEach(d => cont.innerHTML += renderPostCard(d.id, d.data(), isAdmin));
     });
-    // Members list
-    onSnapshot(collection(db,"users"), snap => {
-        const list = document.getElementById("groupUsersList");
-        list.innerHTML = "";
-        snap.forEach(uSnap => {
-            const u = uSnap.data();
-            const uIsAdmin = admins.includes(u.email);
-            const uIsCreator = u.email === creator;
-            list.innerHTML += `<div class="list-group-item d-flex justify-content-between align-items-center rounded mb-2 shadow-sm border-0 bg-light" style="border-radius:10px!important;">
-                <div class="d-flex align-items-center gap-2">
-                    <img src="${u.avatar}" class="profile-img-nav" style="width:32px;height:32px;border-color:var(--border);cursor:pointer;" onclick="viewUserProfile('${u.email}')">
-                    <div>
-                        <h6 class="small fw-bold mb-0 clickable-name" onclick="viewUserProfile('${u.email}')">${u.name}</h6>
-                        <span class="badge bg-secondary" style="font-size:9px;">${u.bio}</span>
-                    </div>
-                </div>
-                <div class="d-flex gap-1 flex-wrap">
-                    ${uIsCreator ? '<span class="badge bg-success" style="font-size:9px;">منشئ</span>' : uIsAdmin ? '<span class="admin-badge">أدمن</span>' : ''}
-                    ${isCreator && !uIsCreator ? `
-                        <button class="btn btn-sm p-1 ${uIsAdmin?'btn-warning':'btn-outline-success'}" style="font-size:10px;border-radius:6px;" onclick="${uIsAdmin?`removeGroupAdmin('${gid}','${u.email}','${u.name}')`:` assignGroupAdmin('${gid}','${u.email}','${u.name}')`}" title="${uIsAdmin?'إلغاء أدمن':'تعيين أدمن'}">
-                            <i class="fa-solid ${uIsAdmin?'fa-user-minus':'fa-user-shield'}"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger p-1" style="font-size:10px;border-radius:6px;" onclick="expelUserFromGroup('${gid}','${u.email}','${u.name}','${gName}')">
-                            <i class="fa-solid fa-user-xmark"></i>
-                        </button>` : ''}
-                </div>
-            </div>`;
-        });
+    // Members list — only actual group members
+    const list = document.getElementById("groupUsersList");
+    list.innerHTML = "";
+    if (isAdmin) {
+        list.innerHTML += `<button class="btn btn-sm btn-outline-success w-100 mb-3 fw-bold" onclick="openAddMemberModal('${gid}','${gName}')" style="border-radius:10px;font-family:'Cairo',sans-serif;"><i class="fa-solid fa-user-plus me-2"></i>إضافة أعضاء</button>`;
+    }
+    const allMemberEmails = [...new Set([...(groupMembers||[]), creator, ...admins])];
+    allMemberEmails.forEach(mEmail => {
+        const u = allUsersCache[mEmail]; if (!u) return;
+        const uIsAdmin = admins.includes(u.email);
+        const uIsCreator = u.email === creator;
+        list.innerHTML += `<div class="list-group-item d-flex justify-content-between align-items-center rounded mb-2 shadow-sm border-0 bg-light" style="border-radius:10px!important;">
+            <div class="d-flex align-items-center gap-2">
+                <img src="${u.avatar}" class="profile-img-nav" style="width:32px;height:32px;border-color:var(--border);cursor:pointer;" onclick="viewUserProfile('${u.email}')">
+                <div><h6 class="small fw-bold mb-0 clickable-name" onclick="viewUserProfile('${u.email}')">${u.name}</h6><span class="badge bg-secondary" style="font-size:9px;">${u.bio}</span></div>
+            </div>
+            <div class="d-flex gap-1 flex-wrap">
+                ${uIsCreator ? '<span class="badge bg-success" style="font-size:9px;">منشئ</span>' : u.bio==='مدير مشروع' ? '<span class="badge px-2 py-1" style="font-size:9px;background:#7c3aed;color:white;border-radius:6px;"><i class="fa-solid fa-shield-halved me-1"></i>مدير مشروع</span>' : uIsAdmin ? '<span class="admin-badge">أدمن</span>' : ''}
+                ${isAdmin && !uIsCreator && u.bio !== 'مدير مشروع' ? `
+                    <button class="btn btn-sm p-1 ${uIsAdmin?'btn-warning':'btn-outline-success'}" style="font-size:10px;border-radius:6px;" onclick="${uIsAdmin?`removeGroupAdmin('${gid}','${u.email}','${u.name}')`:` assignGroupAdmin('${gid}','${u.email}','${u.name}')`}"><i class="fa-solid ${uIsAdmin?'fa-user-minus':'fa-user-shield'}"></i></button>
+                    <button class="btn btn-sm btn-outline-danger p-1" style="font-size:10px;border-radius:6px;" onclick="expelUserFromGroup('${gid}','${u.email}','${u.name}','${gName}')"><i class="fa-solid fa-user-xmark"></i></button>` : ''}
+            </div></div>`;
     });
     // Join requests for admin
     const inGroupJoinReqs = document.getElementById("inGroupJoinRequests");
@@ -1130,6 +1264,8 @@ window.removeGroupAdmin = async (gid, email, name) => {
 };
 // FIX #12: Admin can remove members
 window.expelUserFromGroup = async (gid, email, name, gName) => {
+    const tgt = allUsersCache[email];
+    if (tgt && tgt.bio === 'مدير مشروع') { Swal.fire('تنبيه','لا يمكن إزالة مدير المشروع','warning'); return; }
     const r = await Swal.fire({ title:`إزالة ${name} من الجروب؟`, icon:'warning', showCancelButton:true, confirmButtonColor:'#d33', cancelButtonText:'إلغاء', confirmButtonText:'إزالة' });
     if (r.isConfirmed) {
         await updateDoc(doc(db,"groups",gid),{ members:arrayRemove(email), admins:arrayRemove(email) });
@@ -1211,12 +1347,33 @@ async function notifyGroupMembers(groupName, postId) {
 function listenToAllPosts() {
     const q = query(collection(db,"posts"), orderBy("createdAt","desc"));
     onSnapshot(q, snap => {
-        const feed = document.getElementById("feedContainer");
-        feed.innerHTML = "";
-        snap.forEach(d => { feed.innerHTML += renderPostCard(d.id, d.data(), false); });
-        // FIX #3: Track views only for new posts this session
+        allPostsData = [];
+        snap.forEach(d => allPostsData.push({ id:d.id, data:d.data() }));
+        renderFeed();
         setTimeout(() => trackPostViews(), 1500);
     });
+}
+
+function renderFeed() {
+    const feed = document.getElementById("feedContainer");
+    if (!feed) return;
+    feed.innerHTML = "";
+    allPostsData.forEach(({ id, data: post }) => {
+        // عرض المنشور فقط إذا كان المستخدم عضواً في المجموعة
+        const groupEntry = Object.values(allGroupsCache).find(g => g.name === post.groupName);
+        if (groupEntry) {
+            const members = groupEntry.members || [];
+            const admins = groupEntry.admins || [groupEntry.creator];
+            const isMember = members.includes(currentUserEmail)
+                          || admins.includes(currentUserEmail)
+                          || groupEntry.creator === currentUserEmail;
+            if (!isMember) return;
+        }
+        feed.innerHTML += renderPostCard(id, post, false);
+    });
+    if (!feed.innerHTML) {
+        feed.innerHTML = '<div class="text-center py-5 text-muted"><i class="fa-solid fa-inbox fa-3x mb-3 opacity-20"></i><p>لا توجد منشورات بعد.</p></div>';
+    }
 }
 
 function renderPostCard(postId, post, isAdmin) {
@@ -1237,7 +1394,7 @@ function renderPostCard(postId, post, isAdmin) {
                 <div style="flex:1;min-width:0;">
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <span class="fw-bold clickable-name" onclick="viewUserProfile('${post.userEmail}')" style="font-size:15px;">${post.userName}</span>
-                        ${isAdmin||isMyPost ? `<button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="deletePost('${postId}')" style="font-size:11px;border-radius:6px;"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+                        ${isAdmin||isMyPost||currentUserRole==='مدير مشروع' ? `<button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="deletePost('${postId}')" style="font-size:11px;border-radius:6px;"><i class="fa-solid fa-trash-can"></i></button>` : ''}
                     </div>
                     <div class="d-flex align-items-center gap-2 mt-1">
                         <span class="post-group-badge"><i class="fa-solid fa-folder me-1"></i>${post.groupName}</span>
@@ -1421,18 +1578,18 @@ function listenToMyNotifications() {
             // For join_request notif, show approve/reject buttons
             const extraBtns = n.type==='join_request' && n.groupId ? `
                 <div class="d-flex gap-1 mt-2">
-                    <button class="btn btn-sm btn-success" onclick="approveJoinRequest('${n.groupId}','${n.requesterEmail}','${n.requesterName}')" style="border-radius:6px;font-size:12px;font-family:'Cairo',sans-serif;">قبول</button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="rejectJoinRequest('${n.groupId}','${n.requesterEmail}')" style="border-radius:6px;font-size:12px;font-family:'Cairo',sans-serif;">رفض</button>
+                    <button class="btn btn-sm btn-success" onclick="event.stopPropagation();approveJoinRequest('${n.groupId}','${n.requesterEmail}','${n.requesterName}','${d.id}')" style="border-radius:6px;font-size:12px;font-family:'Cairo',sans-serif;">قبول</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation();rejectJoinRequest('${n.groupId}','${n.requesterEmail}','${d.id}')" style="border-radius:6px;font-size:12px;font-family:'Cairo',sans-serif;">رفض</button>
                 </div>` : '';
-            const problemLink = n.type==='problem' && n.locationUrl ? `<a href="${n.locationUrl}" target="_blank" class="btn btn-sm btn-outline-danger mt-2" style="border-radius:6px;font-size:11px;font-family:'Cairo',sans-serif;"><i class="fa-solid fa-location-dot me-1"></i>عرض الموقع</a>` : '';
+            const problemHint = n.type==='problem' ? `<div class="text-muted mt-1" style="font-size:10px;"><i class="fa-solid fa-hand-pointer me-1"></i>اضغط لعرض الصور والتفاصيل</div>` : '';
             cont.innerHTML += `
-            <div class="notif-item d-flex align-items-start gap-3 ${!n.read?'unread':''}" onclick="markNotifRead('${d.id}')">
+            <div class="notif-item d-flex align-items-start gap-3 ${!n.read?'unread':''}" onclick="handleNotifClick('${d.id}')" style="cursor:pointer;">
                 <div class="notif-icon" style="background:${color}22;"><i class="fa-solid ${iconKey}" style="color:${color};font-size:16px;"></i></div>
                 <div style="flex:1;min-width:0;">
                     <div class="fw-bold" style="font-size:13px;">${n.title}</div>
                     <div class="text-muted" style="font-size:12px;">${n.body||''}</div>
                     <div class="text-muted" style="font-size:10px;margin-top:2px;">${getTimeAgo(n.createdAt)}</div>
-                    ${extraBtns}${problemLink}
+                    ${extraBtns}${problemHint}
                 </div>
                 ${!n.read?'<span class="badge rounded-pill" style="background:var(--secondary);font-size:9px;align-self:center;">جديد</span>':''}
             </div>`;
@@ -1455,12 +1612,49 @@ window.clearChatBadge = async () => {
     snap.forEach(async d => await updateDoc(doc(db,"users",currentUserEmail,"notifications",d.id),{ read:true }));
 };
 window.markNotifRead = async (id) => { await updateDoc(doc(db,"users",currentUserEmail,"notifications",id),{ read:true }); };
-window.clearAllNotifications = async () => {
-    const r = await Swal.fire({ title:'مسح جميع الإشعارات؟', icon:'question', showCancelButton:true, confirmButtonColor:'#d33', cancelButtonText:'إلغاء', confirmButtonText:'مسح الكل' });
-    if (r.isConfirmed) {
-        const snap = await getDocs(collection(db,"users",currentUserEmail,"notifications"));
-        snap.forEach(async d => await deleteDoc(doc(db,"users",currentUserEmail,"notifications",d.id)));
+
+// ======= NOTIFICATION CLICK NAVIGATION =======
+window.handleNotifClick = async (notifId) => {
+    const nSnap = await getDoc(doc(db,"users",currentUserEmail,"notifications",notifId));
+    if (!nSnap.exists()) return;
+    const n = nSnap.data();
+    await updateDoc(doc(db,"users",currentUserEmail,"notifications",notifId),{ read:true });
+    const type = n.type;
+    if (type === 'join_request') return; // الأزرار تتولى التعامل
+    if (type === 'join_approved' && n.groupId) {
+        switchTab('groupsTab', null);
+        document.querySelectorAll('.nav-link').forEach(e => e.classList.remove('active'));
+        document.querySelector('.nav-link[onclick*="groupsTab"]')?.classList.add('active');
+        setTimeout(() => enterGroupView(n.groupId), 450);
+    } else if (type === 'problem') {
+        const photos = n.photoUrls || [];
+        const photosHtml = photos.length
+            ? photos.map(url => `<div class="mb-2"><img src="${url}" style="width:100%;max-height:240px;object-fit:cover;border-radius:10px;cursor:pointer;" onclick="openLightbox('${url}')"></div>`).join('')
+            : '<p class="text-muted small text-center">لا توجد صور مرفقة</p>';
+        const locBtn = n.locationUrl
+            ? `<a href="${n.locationUrl}" target="_blank" class="btn btn-sm btn-outline-danger w-100 mt-2" style="border-radius:8px;font-family:'Cairo',sans-serif;"><i class="fa-solid fa-location-dot me-1"></i>عرض الموقع على الخريطة</a>`
+            : '';
+        await Swal.fire({
+            title: `<i class="fa-solid fa-triangle-exclamation text-danger me-2"></i>${n.title}`,
+            html: `<div class="text-start"><p class="mb-3" style="font-size:13px;line-height:1.8;">${n.body||''}</p>${photosHtml}${locBtn}</div>`,
+            confirmButtonColor: '#1b5e20',
+            confirmButtonText: 'إغلاق',
+            width: 'min(92vw, 520px)'
+        });
+    } else if (type === 'post' || type === 'comment' || type === 'mention') {
+        switchTab('feedTab', null);
+        document.querySelectorAll('.nav-link').forEach(e => e.classList.remove('active'));
+        document.querySelector('.nav-link[onclick*="feedTab"]')?.classList.add('active');
     }
+};
+window.markAllNotificationsRead = async () => {
+    const snap = await getDocs(collection(db,"users",currentUserEmail,"notifications"));
+    const batch2 = writeBatch(db);
+    snap.forEach(d => batch2.update(d.ref, { read:true }));
+    await batch2.commit();
+    const badge = document.getElementById("notifBadge");
+    if (badge) badge.style.display = "none";
+    Swal.fire({toast:true,position:'bottom-end',icon:'success',title:'تمت مشاهدة جميع الإشعارات',showConfirmButton:false,timer:2000});
 };
 window.openNotificationsTab = (el) => { switchTab('notificationsTab',el); };
 
@@ -1654,6 +1848,11 @@ async function loadLastMessages() {
 
 // ======= DIRECT CHAT WITH MESSAGE STATUS =======
 window.openDirectChat = (email, name) => {
+    // clear DM unread indicator for this user
+    const wrapper = document.querySelector('.user-card-wrapper[data-email="' + email + '"]');
+    if (wrapper) { wrapper.style.border = ''; const _b=wrapper.querySelector('.dm-unread-badge'); if(_b) _b.style.display='none'; }
+    if (!perUserUnreadDM) perUserUnreadDM = {};
+    delete perUserUnreadDM[email];
     targetChatUserEmail = email;
     currentChatRoomId = currentUserEmail<email?`${currentUserEmail}_${email}`:`${email}_${currentUserEmail}`;
     document.getElementById("chatModalTitle").innerText = `محادثة مع ${name}`;
@@ -1714,7 +1913,7 @@ window.sendDirectMessage = async () => {
         // FIX #7: Only send badge notification, not in notifications list
         await addDoc(collection(db,"users",targetChatUserEmail,"notifications"),{
             title:`رسالة جديدة من ${currentUserName}`, body:text.substring(0,60),
-            type:'message', read:false, createdAt:Date.now()
+            type:'message', senderEmail:currentUserEmail, senderName:currentUserName, read:false, createdAt:Date.now()
         });
     } catch(err) {
         Swal.fire({ toast:true, position:'top-end', icon:'error', title:'فشل إرسال الرسالة', showConfirmButton:false, timer:2000 });
@@ -1769,7 +1968,7 @@ async function initiateCall(targetEmail, targetName, callType) {
     document.getElementById("callType").innerText = callType==='فيديو'?'مكالمة فيديو':'مكالمة صوتية';
     document.getElementById("callStatus").innerText = 'جاري الاتصال...';
     document.getElementById("callAvatar").src = allUsersCache[targetEmail]?.avatar||'';
-    document.getElementById("callAcceptBtn").style.display = "none";
+    const _caw2 = document.getElementById("callAcceptWrapper"); if(_caw2) _caw2.style.display='none';
     // Listen for answer
     callUnsubscribe = onSnapshot(doc(db,"calls",currentCallId), async snap => {
         const data = snap.data();
@@ -1810,7 +2009,8 @@ function showIncomingCall(callId, callData) {
     document.getElementById("callType").innerText = callData.type==='فيديو'?'مكالمة فيديو واردة':'مكالمة صوتية واردة';
     document.getElementById("callStatus").innerText = 'مكالمة واردة';
     document.getElementById("callAvatar").src = callData.callerAvatar||'';
-    document.getElementById("callAcceptBtn").style.display = "block";
+    const _caw = document.getElementById("callAcceptWrapper"); if(_caw) _caw.style.display='block';
+    const _cab = document.getElementById("callAcceptBtn"); if(_cab) _cab.style.display='flex';
 }
 
 window.acceptCall = async () => {
@@ -1837,6 +2037,7 @@ window.acceptCall = async () => {
         });
     });
     document.getElementById("callOverlay").classList.remove("active");
+    const _caw3=document.getElementById("callAcceptWrapper"); if(_caw3) _caw3.style.display='block';
     const bar = document.getElementById("activeCallBar");
     bar.style.display = "flex";
     document.getElementById("activeCallName").innerText = callData.callerName;
@@ -2016,9 +2217,7 @@ window.saveAchievement = async () => {
     const photoUrls = [];
     try {
         for (const file of files) {
-            const path = `achievements/${currentUserEmail.replace(/[@.]/g,'_')}/${today}_${Date.now()}`;
-            await uploadBytes(ref(storage,path), file);
-            const url = await getDownloadURL(ref(storage,path));
+            const url = await fileToBase64(file, 900, 0.78);
             photoUrls.push(url);
         }
         await setDoc(doc(db,"users",currentUserEmail,"achievements",today),{ summary:text, photoUrls, userName:currentUserName, createdAt:Date.now() },{ merge:true });
@@ -2050,9 +2249,7 @@ window.saveProblem = async () => {
     const locationUrl = problemLat ? `https://maps.google.com/?q=${problemLat},${problemLng}` : null;
     try {
         for (const file of files) {
-            const path = `problems/${currentUserEmail.replace(/[@.]/g,'_')}/${Date.now()}`;
-            await uploadBytes(ref(storage,path), file);
-            const url = await getDownloadURL(ref(storage,path));
+            const url = await fileToBase64(file, 900, 0.78);
             photoUrls.push(url);
         }
         await addDoc(collection(db,"problems"),{ reporterEmail:currentUserEmail, reporterName:currentUserName, text, photoUrls, locationUrl, location:`${problemLat||''},${problemLng||''}`, createdAt:Date.now() });
@@ -2110,5 +2307,20 @@ window.switchTab = (tabId, el) => {
 setTimeout(checkInviteParam, 3000);
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<div class="modal fade" id="addMemberModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow" dir="rtl">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" style="font-family:Cairo,sans-serif;color:var(--primary-dark);"><i class="fa-solid fa-user-plus me-2"></i>إضافة عضو</h5>
+        <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-2">
+        <input id="addMemberSearch" type="text" class="form-control mb-3" placeholder="ابحث بالاسم أو البريد..." oninput="filterAddMemberList()">
+        <div id="addMemberList" style="max-height:300px;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
