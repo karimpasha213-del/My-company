@@ -391,8 +391,14 @@
     <h2>تعيين كلمة مرور جديدة</h2>
     <span class="reset-email-info">الحساب: <strong id="resetEmailDisplay">...</strong></span>
     <div id="resetFormArea">
-      <input type="password" id="newPasswordInput" placeholder="كلمة المرور الجديدة ••••••••">
-      <input type="password" id="confirmPasswordInput" placeholder="تأكيد كلمة المرور ••••••••">
+      <div style="position:relative;margin-bottom:12px;">
+        <input type="password" id="newPasswordInput" placeholder="كلمة المرور الجديدة ••••••••" style="width:100%;padding:12px 44px 12px 14px;border:1.5px solid #dfe4ea;border-radius:10px;font-size:1em;box-sizing:border-box;text-align:right;direction:rtl;font-family:'Cairo',sans-serif;transition:border-color 0.2s,box-shadow 0.2s;">
+        <button type="button" onclick="toggleResetEye('newPasswordInput','eyeBtn1')" id="eyeBtn1" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;padding:0;font-size:17px;line-height:1;" tabindex="-1"><i class="fa-regular fa-eye"></i></button>
+      </div>
+      <div style="position:relative;margin-bottom:12px;">
+        <input type="password" id="confirmPasswordInput" placeholder="تأكيد كلمة المرور ••••••••" style="width:100%;padding:12px 44px 12px 14px;border:1.5px solid #dfe4ea;border-radius:10px;font-size:1em;box-sizing:border-box;text-align:right;direction:rtl;font-family:'Cairo',sans-serif;transition:border-color 0.2s,box-shadow 0.2s;">
+        <button type="button" onclick="toggleResetEye('confirmPasswordInput','eyeBtn2')" id="eyeBtn2" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;padding:0;font-size:17px;line-height:1;" tabindex="-1"><i class="fa-regular fa-eye"></i></button>
+      </div>
       <button class="btn-reset-new" id="resetSubmitBtn"><i class="fa-solid fa-shield-check me-2"></i>تأكيد كلمة المرور الجديدة</button>
     </div>
     <div class="reset-msg-new" id="resetPasswordMsg"></div>
@@ -1404,6 +1410,16 @@ window.copyInviteLink = async () => {
 };
 
 // Check invite code on load
+// ======= EYE TOGGLE FOR RESET PASSWORD =======
+window.toggleResetEye = (inputId, btnId) => {
+    const input = document.getElementById(inputId);
+    const btn = document.getElementById(btnId);
+    if (!input || !btn) return;
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    btn.innerHTML = isHidden ? '<i class="fa-regular fa-eye-slash"></i>' : '<i class="fa-regular fa-eye"></i>';
+};
+
 // ======= PASSWORD RESET VIA EMAIL LINK =======
 (function initResetPasswordPage() {
     const params = new URLSearchParams(window.location.search);
@@ -1451,13 +1467,21 @@ window.copyInviteLink = async () => {
 
         try {
             await confirmPasswordReset(auth, oobCode, p1);
-            msg.innerHTML = '✅ تم تغيير كلمة المرور بنجاح!<br><small>سيتم توجيهك لصفحة الدخول خلال ثوانٍ...</small>';
+            msg.innerHTML = '✅ تم تغيير كلمة المرور بنجاح!<br><small>جاري تسجيل دخولك تلقائياً...</small>';
             msg.className = 'reset-msg-new rm-success'; msg.style.display = 'block';
             document.getElementById('resetFormArea').style.display = 'none';
-            setTimeout(() => {
+            // Auto-login مباشرة بدون reload
+            try {
+                const resetEmail = document.getElementById('resetEmailDisplay').textContent.trim();
+                await signInWithEmailAndPassword(auth, resetEmail, p1);
                 window.history.replaceState({}, document.title, window.location.pathname);
-                window.location.reload();
-            }, 2500);
+                document.getElementById('resetPasswordPage').style.display = 'none';
+            } catch(loginErr) {
+                setTimeout(() => {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    window.location.reload();
+                }, 2000);
+            }
         } catch(e) {
             const errs = {
                 'auth/expired-action-code': 'الرابط منتهي الصلاحية. اطلب رابطاً جديداً.',
