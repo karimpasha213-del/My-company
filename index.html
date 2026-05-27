@@ -1140,11 +1140,7 @@ if (forgotSendBtn) {
         }
         forgotSendBtn.disabled = true;
         forgotSendBtn.innerHTML = 'جاري الإرسال<span class="spinner-mini"></span>';
-        const resetActionSettings = {
-            url: 'https://iot-irrigation-project2026.github.io/IOT-Project/',
-            handleCodeInApp: false
-        };
-        sendPasswordResetEmail(auth, email, resetActionSettings)
+        sendPasswordResetEmail(auth, email)
             .then(() => {
                 showForgotMsg('تم إرسال رابط إستعادة كلمة السر إلى بريدك الإلكتروني ✅', 'success');
                 forgotSendBtn.disabled = false;
