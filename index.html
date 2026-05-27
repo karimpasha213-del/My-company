@@ -220,6 +220,90 @@
         .join-badge { background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700; }
         .browsable-group { border-radius:var(--radius-md);padding:14px;background:white;border:1px solid var(--border);margin-bottom:10px;transition:var(--transition); }
         .browsable-group:hover { border-color:var(--secondary);background:var(--accent-light); }
+
+        /* ===== FORGOT PASSWORD OVERLAY ===== */
+        @keyframes fpFadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes fpSlideUp { from{transform:translateY(24px);opacity:0} to{transform:translateY(0);opacity:1} }
+        #forgotOverlay {
+            display:none; position:fixed; inset:0;
+            background:rgba(0,0,0,0.6); backdrop-filter:blur(4px);
+            z-index:999999; align-items:center; justify-content:center;
+            animation:fpFadeIn 0.25s ease;
+        }
+        .forgot-card {
+            background:#fff; border-radius:20px; padding:32px 28px 28px;
+            width:90%; max-width:380px; text-align:center; direction:rtl;
+            box-shadow:0 24px 70px rgba(0,0,0,0.35);
+            animation:fpSlideUp 0.3s ease; position:relative;
+        }
+        .forgot-card .fp-close {
+            position:absolute; top:12px; left:16px;
+            background:none; border:none; font-size:1.5em; cursor:pointer; color:#888; line-height:1;
+        }
+        .forgot-card .fp-close:hover { color:#e74c3c; }
+        .forgot-icon-circle {
+            width:62px; height:62px; margin:0 auto 14px;
+            background:linear-gradient(135deg,#1b5e20,#4caf50);
+            border-radius:50%; display:flex; align-items:center; justify-content:center;
+            font-size:1.8em; color:white; box-shadow:0 6px 18px rgba(27,94,32,0.35);
+        }
+        .forgot-card h3 { margin:4px 0 4px; color:#1b5e20; font-size:1.2em; }
+        .forgot-card .fp-sub { color:#7f8c8d; font-size:0.88em; margin-bottom:18px; line-height:1.6; }
+        .forgot-card input[type="email"] {
+            width:100%; padding:12px 14px; border:1.5px solid #dfe4ea; border-radius:10px;
+            font-size:1em; box-sizing:border-box; text-align:right; direction:rtl;
+            font-family:'Cairo',sans-serif; transition:border-color 0.2s, box-shadow 0.2s;
+        }
+        .forgot-card input[type="email"]:focus { outline:none; border-color:#1b5e20; box-shadow:0 0 0 3px rgba(27,94,32,0.12); }
+        .fp-btn-send {
+            width:100%; padding:12px; margin-top:14px;
+            background:linear-gradient(135deg,#1b5e20,#4caf50); color:white;
+            border:none; border-radius:10px; font-weight:700; font-size:1em;
+            cursor:pointer; transition:all 0.25s; box-shadow:0 4px 12px rgba(27,94,32,0.3);
+            font-family:'Cairo',sans-serif;
+        }
+        .fp-btn-send:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 6px 18px rgba(27,94,32,0.45); }
+        .fp-btn-send:disabled { opacity:0.65; cursor:not-allowed; transform:none; }
+        .fp-msg { margin-top:14px; padding:10px 12px; border-radius:8px; font-size:0.88em; font-weight:700; display:none; line-height:1.6; }
+        .fp-msg.fp-success { background:#e8f8f0; color:#1b5e20; border:1px solid #b8f0cc; }
+        .fp-msg.fp-error   { background:#fdecea; color:#c0392b; border:1px solid #f5c6cb; }
+        .fp-spinner { display:inline-block; width:15px; height:15px; border:2px solid rgba(255,255,255,0.4); border-top-color:white; border-radius:50%; animation:fpSpin 0.8s linear infinite; vertical-align:middle; margin-right:8px; }
+        @keyframes fpSpin { to{transform:rotate(360deg)} }
+
+        /* ===== RESET PASSWORD PAGE ===== */
+        #resetPasswordPage {
+            display:none; position:fixed; inset:0; z-index:999998;
+            background:linear-gradient(135deg,#0d4f1c 0%,#1a7a35 50%,#0d4f1c 100%);
+            align-items:center; justify-content:center;
+        }
+        .reset-card-new {
+            background:rgba(255,255,255,0.96); padding:38px 30px 30px;
+            border-radius:22px; width:90%; max-width:390px; text-align:center;
+            box-shadow:0 24px 70px rgba(0,0,0,0.4); direction:rtl;
+            animation:fpSlideUp 0.3s ease;
+        }
+        .reset-card-new .reset-icon { font-size:2.8em; margin-bottom:10px; }
+        .reset-card-new h2 { margin:4px 0 6px; color:#1b5e20; font-size:1.28em; }
+        .reset-email-info { font-size:0.84em; color:#7f8c8d; margin-bottom:20px; display:block; }
+        .reset-email-info strong { color:#1b5e20; }
+        .reset-card-new input[type="password"] {
+            width:100%; padding:12px 14px; border:1.5px solid #dfe4ea; border-radius:10px;
+            font-size:1em; box-sizing:border-box; margin-bottom:12px; text-align:right;
+            direction:rtl; font-family:'Cairo',sans-serif; transition:border-color 0.2s, box-shadow 0.2s;
+        }
+        .reset-card-new input[type="password"]:focus { outline:none; border-color:#1b5e20; box-shadow:0 0 0 3px rgba(27,94,32,0.12); }
+        .btn-reset-new {
+            width:100%; padding:13px;
+            background:linear-gradient(135deg,#1b5e20,#4caf50); color:white;
+            border:none; border-radius:10px; font-weight:700; font-size:1em;
+            cursor:pointer; transition:all 0.25s; box-shadow:0 4px 12px rgba(27,94,32,0.35);
+            margin-top:4px; font-family:'Cairo',sans-serif;
+        }
+        .btn-reset-new:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 6px 18px rgba(27,94,32,0.5); }
+        .btn-reset-new:disabled { opacity:0.65; cursor:not-allowed; transform:none; }
+        .reset-msg-new { margin-top:14px; padding:10px 12px; border-radius:8px; font-size:0.88em; font-weight:700; display:none; line-height:1.6; }
+        .reset-msg-new.rm-success { background:#e8f8f0; color:#1b5e20; border:1px solid #b8f0cc; }
+        .reset-msg-new.rm-error   { background:#fdecea; color:#c0392b; border:1px solid #f5c6cb; }
     </style>
 </head>
 <body>
@@ -287,26 +371,31 @@
   </div>
 </div>
 
-<!-- PASSWORD RESET OVERLAY -->
-<div id="passwordResetOverlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:999999;background:linear-gradient(135deg,#0d4f1c 0%,#1a7a35 50%,#0d4f1c 100%);align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:24px;padding:40px 36px;max-width:420px;width:90%;box-shadow:0 40px 100px rgba(0,0,0,0.4);text-align:center;font-family:'Cairo',sans-serif;">
-    <div style="width:72px;height:72px;background:linear-gradient(135deg,#1b5e20,#4caf50);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-      <i class="fa-solid fa-lock-open" style="font-size:28px;color:white;"></i>
+<!-- FORGOT PASSWORD OVERLAY -->
+<div id="forgotOverlay">
+  <div class="forgot-card">
+    <button class="fp-close" id="fpCloseBtn" aria-label="إغلاق">×</button>
+    <div class="forgot-icon-circle">🔒</div>
+    <h3>استعادة كلمة المرور</h3>
+    <p class="fp-sub">أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين فوراً</p>
+    <input type="email" id="fpEmailInput" placeholder="name@company.com" autocomplete="email" dir="ltr">
+    <button class="fp-btn-send" id="fpSendBtn"><i class="fa-solid fa-paper-plane me-2"></i>إرسال الرابط</button>
+    <div class="fp-msg" id="fpMsg"></div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD PAGE (shown when URL has ?mode=resetPassword) -->
+<div id="resetPasswordPage">
+  <div class="reset-card-new">
+    <div class="reset-icon">🔐</div>
+    <h2>تعيين كلمة مرور جديدة</h2>
+    <span class="reset-email-info">الحساب: <strong id="resetEmailDisplay">...</strong></span>
+    <div id="resetFormArea">
+      <input type="password" id="newPasswordInput" placeholder="كلمة المرور الجديدة ••••••••">
+      <input type="password" id="confirmPasswordInput" placeholder="تأكيد كلمة المرور ••••••••">
+      <button class="btn-reset-new" id="resetSubmitBtn"><i class="fa-solid fa-shield-check me-2"></i>تأكيد كلمة المرور الجديدة</button>
     </div>
-    <h3 style="font-weight:700;color:#1b5e20;margin-bottom:6px;">تعيين كلمة مرور جديدة</h3>
-    <p style="color:#64748b;font-size:13px;margin-bottom:24px;">أدخل كلمة مرورك الجديدة مرتين للتأكيد</p>
-    <div style="text-align:right;margin-bottom:14px;">
-      <label style="font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;display:block;">كلمة المرور الجديدة</label>
-      <input type="password" id="newPasswordInput" placeholder="••••••••" style="width:100%;padding:12px 16px;border:2px solid #e5e7eb;border-radius:12px;font-size:14px;font-family:'Cairo',sans-serif;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='#1b5e20'" onblur="this.style.borderColor='#e5e7eb'">
-    </div>
-    <div style="text-align:right;margin-bottom:24px;">
-      <label style="font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;display:block;">تأكيد كلمة المرور</label>
-      <input type="password" id="confirmPasswordInput" placeholder="••••••••" style="width:100%;padding:12px 16px;border:2px solid #e5e7eb;border-radius:12px;font-size:14px;font-family:'Cairo',sans-serif;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='#1b5e20'" onblur="this.style.borderColor='#e5e7eb'">
-    </div>
-    <div id="resetPasswordMsg" style="color:#ef4444;font-size:12px;margin-bottom:12px;display:none;"></div>
-    <button onclick="submitPasswordReset()" style="width:100%;padding:14px;background:linear-gradient(135deg,#1b5e20,#4caf50);border:none;border-radius:12px;color:white;font-size:15px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;box-shadow:0 4px 20px rgba(27,94,32,0.35);transition:opacity 0.2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">
-      <i class="fa-solid fa-shield-check me-2"></i>حفظ كلمة المرور
-    </button>
+    <div class="reset-msg-new" id="resetPasswordMsg"></div>
   </div>
 </div>
 
@@ -358,7 +447,7 @@
                             </div>
                             <button type="submit" class="btn btn-agri w-100 fw-bold py-2 mb-3" style="font-size:15px;"><i class="fa-solid fa-right-to-bracket me-2"></i>تسجيل الدخول الآمن</button>
                         </form>
-                        <div class="text-center mb-2"><span class="small fw-bold" style="color:var(--primary-mid);cursor:pointer;" onclick="handleForgotPassword()"><i class="fa-solid fa-key me-1"></i>نسيت كلمة المرور؟</span></div>
+                        <div class="text-center mb-2"><span class="small fw-bold" style="color:var(--primary-mid);cursor:pointer;" onclick="openForgotModal()"><i class="fa-solid fa-key me-1"></i>نسيت كلمة المرور؟</span></div>
                         <div class="text-center"><p class="small text-muted mb-0">ليس لديك حساب؟ <span class="fw-bold" style="color:var(--primary-mid);cursor:pointer;" onclick="toggleAuth(true)">إنشاء حساب جديد</span></p></div>
                     </div>
                     <div id="registerSection" class="d-none">
@@ -368,6 +457,19 @@
                         </div>
                         <form id="registerForm" onsubmit="handleRegister(event)">
                             <div class="mb-3"><label class="form-label">الاسم بالكامل</label><input type="text" id="regName" class="form-control" placeholder="م. كريم عمرو" required></div>
+                            <div class="mb-3">
+                                <label class="form-label">الجنس</label>
+                                <div class="d-flex gap-3">
+                                    <label class="d-flex align-items-center gap-2 px-3 py-2 rounded-3 border" style="cursor:pointer;flex:1;transition:all 0.2s;" onclick="this.parentElement.querySelectorAll('label').forEach(l=>l.style.background='');this.style.background='#e8f5e9';this.style.borderColor='#1b5e20';">
+                                        <input type="radio" name="regGender" id="regGenderMale" value="ذكر" required style="accent-color:#1b5e20;">
+                                        <span style="font-size:18px;">👨</span><span class="fw-bold" style="font-size:14px;">ذكر</span>
+                                    </label>
+                                    <label class="d-flex align-items-center gap-2 px-3 py-2 rounded-3 border" style="cursor:pointer;flex:1;transition:all 0.2s;" onclick="this.parentElement.querySelectorAll('label').forEach(l=>l.style.background='');this.style.background='#e8f5e9';this.style.borderColor='#1b5e20';">
+                                        <input type="radio" name="regGender" id="regGenderFemale" value="أنثى" required style="accent-color:#1b5e20;">
+                                        <span style="font-size:18px;">👩</span><span class="fw-bold" style="font-size:14px;">أنثى</span>
+                                    </label>
+                                </div>
+                            </div>
                             <div class="mb-3"><label class="form-label">البريد الإلكتروني</label><input type="email" id="regEmail" class="form-control" placeholder="eng.karim@gmail.com" required></div>
                             <div class="mb-3">
                                 <label class="form-label">الدور الوظيفي</label>
@@ -909,6 +1011,9 @@ window.handleRegister = async (e) => {
     const role = document.getElementById('regRole').value;
     const phone = document.getElementById('regPhone').value.trim();
     const pass = document.getElementById('regPass').value;
+    const genderEl = document.querySelector('input[name="regGender"]:checked');
+    const gender = genderEl ? genderEl.value : '';
+    if (!gender) { Swal.fire('تنبيه','من فضلك اختر الجنس (ذكر / أنثى)','warning'); return; }
     if (role === 'مدير مشروع') {
         const sk = document.getElementById('regSecretKey').value;
         if (sk !== 'Abcd@1234') { Swal.fire('خطأ','المفتاح السري لمدير المشروع غير صحيح','error'); return; }
@@ -917,7 +1022,7 @@ window.handleRegister = async (e) => {
     Swal.fire({ title:'جاري إنشاء الحساب...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
     try {
         await createUserWithEmailAndPassword(auth, email, pass);
-        await setDoc(doc(db,"users",email), { name, email, bio:role, phone, avatar:"https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100", createdAt:Date.now() });
+        await setDoc(doc(db,"users",email), { name, email, bio:role, phone, gender, avatar:"https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100", createdAt:Date.now() });
         Swal.fire({ title:'تم الإنشاء!', text:`أهلاً بك ${name}`, icon:'success', confirmButtonColor:'#1b5e20' });
     } catch(err) {
         const msgs = { 'auth/email-already-in-use':'البريد مسجل مسبقاً.','auth/weak-password':'كلمة المرور ضعيفة.','auth/invalid-email':'صيغة البريد غير صحيحة.' };
@@ -975,62 +1080,70 @@ window.leaveCurrentGroup = async () => {
     } catch(e) { Swal.fire('خطأ', e.message, 'error'); }
 };
 window.handleLogout = () => { sessionStorage.removeItem('agri_tab'); signOut(auth).then(()=>location.reload()); };
-window.handleForgotPassword = async () => {
-    const r = await Swal.fire({
-        title: 'استعادة كلمة المرور',
-        html: `
-          <p style="font-family:'Cairo',sans-serif;color:#64748b;font-size:13px;margin-bottom:12px;">أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور</p>
-          <input id="swal-reset-email" type="email" class="swal2-input" placeholder="name@company.com" style="font-family:'Cairo',sans-serif;" dir="ltr">
-        `,
-        showCancelButton: true,
-        confirmButtonColor: '#1b5e20',
-        cancelButtonText: 'إلغاء',
-        confirmButtonText: '<i class="fa-solid fa-paper-plane me-1"></i> إرسال الرابط',
-        focusConfirm: false,
-        preConfirm: () => {
-            const val = document.getElementById('swal-reset-email').value.trim();
-            if (!val) { Swal.showValidationMessage('أدخل البريد الإلكتروني'); return false; }
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) { Swal.showValidationMessage('صيغة البريد غير صحيحة'); return false; }
-            return val;
-        }
-    });
-    if (!r.value) return;
-    try {
-        // إرسال بدون actionCodeSettings لضمان وصول الإيميل دائماً
-        await sendPasswordResetEmail(auth, r.value);
-        Swal.fire({
-            title: '📧 تم إرسال الرابط!',
-            html: `
-              <div style="font-family:'Cairo',sans-serif;text-align:center;">
-                <p style="font-size:14px;color:#374151;margin-bottom:12px;">
-                  تم إرسال رابط إعادة التعيين إلى:<br>
-                  <b style="color:#1b5e20;">${r.value}</b>
-                </p>
-                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;font-size:12px;color:#166534;">
-                  <i class="fa-solid fa-circle-info me-1"></i>
-                  افحص بريدك الوارد (Inbox) وكذلك مجلد الـ Spam
-                </div>
-              </div>`,
-            icon: 'success',
-            confirmButtonColor: '#1b5e20',
-            confirmButtonText: 'حسناً'
-        });
-    }
-    catch(err) {
-        const m = {
-            'auth/user-not-found': 'لا يوجد حساب مسجّل بهذا البريد الإلكتروني.',
-            'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
-            'auth/too-many-requests': 'تم إرسال طلبات كثيرة. انتظر قليلاً ثم حاول مجدداً.',
-            'auth/network-request-failed': 'تحقق من اتصالك بالإنترنت وحاول مجدداً.'
-        };
-        Swal.fire({
-            title: 'خطأ',
-            text: m[err.code] || `حدث خطأ غير متوقع: ${err.message}`,
-            icon: 'error',
-            confirmButtonColor: '#1b5e20'
-        });
-    }
+// ===== FORGOT PASSWORD OVERLAY =====
+window.openForgotModal = () => {
+    const overlay = document.getElementById('forgotOverlay');
+    const input = document.getElementById('fpEmailInput');
+    const msg = document.getElementById('fpMsg');
+    // سحب البريد من حقل الدخول إن كان موجوداً
+    const loginEmail = document.getElementById('loginEmail');
+    if (loginEmail && loginEmail.value) input.value = loginEmail.value;
+    msg.style.display = 'none';
+    msg.textContent = '';
+    overlay.style.display = 'flex';
+    setTimeout(() => input.focus(), 100);
 };
+function closeForgotModal() {
+    const overlay = document.getElementById('forgotOverlay');
+    const btn = document.getElementById('fpSendBtn');
+    overlay.style.display = 'none';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i>إرسال الرابط';
+}
+function showFpMsg(text, type) {
+    const el = document.getElementById('fpMsg');
+    el.textContent = text;
+    el.className = 'fp-msg fp-' + type;
+    el.style.display = 'block';
+}
+(function initForgotModal() {
+    document.addEventListener('DOMContentLoaded', () => {
+        const overlay = document.getElementById('forgotOverlay');
+        const input = document.getElementById('fpEmailInput');
+        const btn = document.getElementById('fpSendBtn');
+        document.getElementById('fpCloseBtn').addEventListener('click', closeForgotModal);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closeForgotModal(); });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && overlay.style.display === 'flex') closeForgotModal();
+        });
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); btn.click(); } });
+        btn.addEventListener('click', async () => {
+            const email = input.value.trim();
+            document.getElementById('fpMsg').style.display = 'none';
+            if (!email) { showFpMsg('من فضلك أدخل بريدك الإلكتروني.', 'error'); return; }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showFpMsg('صيغة البريد الإلكتروني غير صحيحة.', 'error'); return; }
+            btn.disabled = true;
+            btn.innerHTML = 'جاري الإرسال...<span class="fp-spinner"></span>';
+            try {
+                await sendPasswordResetEmail(auth, email);
+                showFpMsg('✅ تم إرسال الرابط إلى بريدك — افحص Inbox وكذلك Spam', 'success');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-rotate-right me-2"></i>إرسال مرة أخرى';
+            } catch(err) {
+                const m = {
+                    'auth/user-not-found': 'لا يوجد حساب بهذا البريد الإلكتروني.',
+                    'auth/invalid-email': 'صيغة البريد غير صحيحة.',
+                    'auth/too-many-requests': 'تم إرسال طلبات كثيرة، انتظر قليلاً.',
+                    'auth/network-request-failed': 'تحقق من اتصال الإنترنت.',
+                    'auth/missing-email': 'أدخل بريدك الإلكتروني.'
+                };
+                showFpMsg('⚠️ ' + (m[err.code] || 'حدث خطأ. حاول مرة أخرى.'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i>إرسال الرابط';
+            }
+        });
+    });
+})();
 async function autoJoinAllGroupsAsPM() {
     try {
         const snap = await getDocs(collection(db,"groups"));
@@ -1292,94 +1405,72 @@ window.copyInviteLink = async () => {
 
 // Check invite code on load
 // ======= PASSWORD RESET VIA EMAIL LINK =======
-let _resetOobCode = null;
-let _resetEmail = null; // البريد الإلكتروني المرتبط بالكود
-
-async function checkPasswordResetMode() {
+(function initResetPasswordPage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') !== 'resetPassword') return;
     const oobCode = params.get('oobCode');
     if (!oobCode) return;
-    try {
-        // verifyPasswordResetCode يُرجع البريد الإلكتروني مباشرة
-        const email = await verifyPasswordResetCode(auth, oobCode);
-        _resetOobCode = oobCode;
-        _resetEmail = email;
-        // إخفاء كل شيء وإظهار واجهة إعادة التعيين
-        document.getElementById("splashScreen").style.display = "none";
-        document.getElementById("authContainer").classList.add("d-none");
-        document.getElementById("mainPlatform").classList.add("d-none");
-        const overlay = document.getElementById("passwordResetOverlay");
-        overlay.style.display = "flex";
-    } catch(e) {
-        // تنظيف الرابط وإظهار رسالة خطأ
-        window.history.replaceState({}, document.title, window.location.pathname);
-        setTimeout(() => {
-            Swal.fire({
-                title: 'الرابط منتهي الصلاحية',
-                html: `<p style="font-family:'Cairo',sans-serif;">هذا الرابط لا يعمل بعد الآن أو تم استخدامه مسبقاً.<br>يرجى طلب رابط جديد.</p>`,
-                icon: 'warning',
-                confirmButtonColor: '#1b5e20',
-                confirmButtonText: 'طلب رابط جديد'
-            }).then(() => window.handleForgotPassword());
-        }, 500);
-    }
-}
 
-window.submitPasswordReset = async () => {
-    const p1 = document.getElementById("newPasswordInput").value;
-    const p2 = document.getElementById("confirmPasswordInput").value;
-    const msgEl = document.getElementById("resetPasswordMsg");
-    const saveBtn = document.querySelector('#passwordResetOverlay button[onclick="submitPasswordReset()"]');
-    msgEl.style.display = "none";
+    // إخفاء كل شيء وإظهار صفحة إعادة التعيين فوراً
+    document.getElementById('splashScreen') && (document.getElementById('splashScreen').style.display = 'none');
+    document.getElementById('authContainer') && document.getElementById('authContainer').classList.add('d-none');
+    document.getElementById('mainPlatform') && document.getElementById('mainPlatform').classList.add('d-none');
+    document.getElementById('resetPasswordPage').style.display = 'flex';
 
-    if (p1.length < 6) {
-        msgEl.innerText = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
-        msgEl.style.display = 'block'; return;
-    }
-    if (p1 !== p2) {
-        msgEl.innerText = 'كلمتا المرور غير متطابقتين، يرجى التأكد';
-        msgEl.style.display = 'block'; return;
-    }
-
-    // إظهار حالة التحميل
-    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>جاري الحفظ...'; }
-
-    try {
-        // 1) تحديث كلمة المرور في Firebase
-        await confirmPasswordReset(auth, _resetOobCode, p1);
-
-        // 2) تسجيل الدخول تلقائياً بكلمة المرور الجديدة
-        await signInWithEmailAndPassword(auth, _resetEmail, p1);
-
-        // 3) إخفاء الواجهة وتنظيف الرابط
-        document.getElementById("passwordResetOverlay").style.display = "none";
-        window.history.replaceState({}, document.title, window.location.pathname);
-        _resetOobCode = null; _resetEmail = null;
-
-        // 4) رسالة نجاح — onAuthStateChanged سيشغّل الـ Dashboard تلقائياً
-        Swal.fire({
-            title: '🎉 تم تغيير كلمة المرور!',
-            html: `<p style="font-family:'Cairo',sans-serif;font-size:14px;">تم تسجيل دخولك تلقائياً، مرحباً بك في منصتك!</p>`,
-            icon: 'success',
-            confirmButtonColor: '#1b5e20',
-            confirmButtonText: 'الذهاب للمنصة',
-            timer: 3000,
-            timerProgressBar: true
+    // التحقق من صلاحية الكود
+    verifyPasswordResetCode(auth, oobCode)
+        .then(email => {
+            document.getElementById('resetEmailDisplay').textContent = email;
+        })
+        .catch(() => {
+            document.getElementById('resetFormArea').style.display = 'none';
+            const msg = document.getElementById('resetPasswordMsg');
+            msg.innerHTML = '⚠️ الرابط منتهي الصلاحية أو مستخدم من قبل.<br>ارجع واطلب رابطاً جديداً.';
+            msg.className = 'reset-msg-new rm-error';
+            msg.style.display = 'block';
         });
-    } catch(e) {
-        if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-shield-check me-2"></i>حفظ كلمة المرور'; }
-        const errs = {
-            'auth/expired-action-code': 'انتهت صلاحية الرابط، يرجى طلب رابط جديد.',
-            'auth/invalid-action-code': 'الرابط غير صالح أو تم استخدامه مسبقاً.',
-            'auth/weak-password': 'كلمة المرور ضعيفة جداً، استخدم 6 أحرف أو أكثر.'
-        };
-        msgEl.innerText = errs[e.code] || 'حدث خطأ غير متوقع. حاول مرة أخرى.';
-        msgEl.style.display = 'block';
-    }
-};
-// فحص الرابط فور تحميل الصفحة
-checkPasswordResetMode();
+
+    document.getElementById('resetSubmitBtn').addEventListener('click', async () => {
+        const p1 = document.getElementById('newPasswordInput').value;
+        const p2 = document.getElementById('confirmPasswordInput').value;
+        const msg = document.getElementById('resetPasswordMsg');
+        const btn = document.getElementById('resetSubmitBtn');
+        msg.style.display = 'none';
+
+        if (p1.length < 6) {
+            msg.textContent = '⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل.';
+            msg.className = 'reset-msg-new rm-error'; msg.style.display = 'block'; return;
+        }
+        if (p1 !== p2) {
+            msg.textContent = '⚠️ كلمتا المرور غير متطابقتين.';
+            msg.className = 'reset-msg-new rm-error'; msg.style.display = 'block'; return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>جاري الحفظ...';
+
+        try {
+            await confirmPasswordReset(auth, oobCode, p1);
+            msg.innerHTML = '✅ تم تغيير كلمة المرور بنجاح!<br><small>سيتم توجيهك لصفحة الدخول خلال ثوانٍ...</small>';
+            msg.className = 'reset-msg-new rm-success'; msg.style.display = 'block';
+            document.getElementById('resetFormArea').style.display = 'none';
+            setTimeout(() => {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                window.location.reload();
+            }, 2500);
+        } catch(e) {
+            const errs = {
+                'auth/expired-action-code': 'الرابط منتهي الصلاحية. اطلب رابطاً جديداً.',
+                'auth/invalid-action-code': 'الرابط غير صالح أو مستخدم من قبل.',
+                'auth/weak-password': 'كلمة المرور ضعيفة جداً، استخدم 6 أحرف أو أكثر.'
+            };
+            msg.textContent = '⚠️ ' + (errs[e.code] || 'حدث خطأ. حاول مرة أخرى.');
+            msg.className = 'reset-msg-new rm-error'; msg.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-shield-check me-2"></i>تأكيد كلمة المرور الجديدة';
+        }
+    });
+})();
 
 function checkInviteParam() {
     const params = new URLSearchParams(window.location.search);
@@ -1837,11 +1928,15 @@ function listenToMyNotifications() {
             const colors = { post:'var(--secondary)', mention:'#2563eb', comment:'#7c3aed', join_request:'#f5a623', join_approved:'var(--secondary)', system:'#64748b', problem:'var(--danger)' };
             const iconKey = icons[n.type]||'fa-bell';
             const color = colors[n.type]||'var(--secondary)';
-            // For join_request notif, show approve/reject buttons
+            // For join_request notif, show approve/reject buttons + clickable name
+            let bodyHtml = n.body || '';
+            if (n.type === 'join_request' && n.requesterEmail && n.requesterName) {
+                bodyHtml = `<span class="fw-semibold" style="color:var(--primary-mid);cursor:pointer;text-decoration:underline;" onclick="event.stopPropagation();viewUserProfile('${n.requesterEmail}')">${n.requesterName}</span> يريد الانضمام إلى جروب <b>${n.gName||''}</b>`;
+            }
             const extraBtns = n.type==='join_request' && n.groupId ? `
                 <div class="d-flex gap-1 mt-2">
-                    <button class="btn btn-sm btn-success" onclick="event.stopPropagation();approveJoinRequest('${n.groupId}','${n.requesterEmail}','${n.requesterName}','${d.id}')" style="border-radius:6px;font-size:12px;font-family:'Cairo',sans-serif;">قبول</button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation();rejectJoinRequest('${n.groupId}','${n.requesterEmail}','${d.id}')" style="border-radius:6px;font-size:12px;font-family:'Cairo',sans-serif;">رفض</button>
+                    <button class="btn btn-sm btn-success" onclick="event.stopPropagation();approveJoinRequest('${n.groupId}','${n.requesterEmail}','${n.requesterName}','${d.id}')" style="border-radius:6px;font-size:12px;font-family:'Cairo',sans-serif;"><i class="fa-solid fa-check me-1"></i>قبول</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation();rejectJoinRequest('${n.groupId}','${n.requesterEmail}','${d.id}')" style="border-radius:6px;font-size:12px;font-family:'Cairo',sans-serif;"><i class="fa-solid fa-xmark me-1"></i>رفض</button>
                 </div>` : '';
             const problemHint = n.type==='problem' ? `<div class="text-muted mt-1" style="font-size:10px;"><i class="fa-solid fa-hand-pointer me-1"></i>اضغط لعرض الصور والتفاصيل</div>` : '';
             cont.innerHTML += `
@@ -1849,7 +1944,7 @@ function listenToMyNotifications() {
                 <div class="notif-icon" style="background:${color}22;"><i class="fa-solid ${iconKey}" style="color:${color};font-size:16px;"></i></div>
                 <div style="flex:1;min-width:0;">
                     <div class="fw-bold" style="font-size:13px;">${n.title}</div>
-                    <div class="text-muted" style="font-size:12px;">${n.body||''}</div>
+                    <div class="text-muted" style="font-size:12px;">${bodyHtml}</div>
                     <div class="text-muted" style="font-size:10px;margin-top:2px;">${getTimeAgo(n.createdAt)}</div>
                     ${extraBtns}${problemHint}
                 </div>
