@@ -976,10 +976,60 @@ window.leaveCurrentGroup = async () => {
 };
 window.handleLogout = () => { sessionStorage.removeItem('agri_tab'); signOut(auth).then(()=>location.reload()); };
 window.handleForgotPassword = async () => {
-    const r = await Swal.fire({ title:'استعادة كلمة المرور', input:'email', inputPlaceholder:'name@company.com', showCancelButton:true, confirmButtonColor:'#1b5e20', cancelButtonText:'إلغاء', confirmButtonText:'إرسال الرابط', preConfirm:(v)=>{ if(!v){ Swal.showValidationMessage('أدخل البريد'); return false; } return v; } });
+    const r = await Swal.fire({
+        title: 'استعادة كلمة المرور',
+        html: `
+          <p style="font-family:'Cairo',sans-serif;color:#64748b;font-size:13px;margin-bottom:12px;">أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور</p>
+          <input id="swal-reset-email" type="email" class="swal2-input" placeholder="name@company.com" style="font-family:'Cairo',sans-serif;" dir="ltr">
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#1b5e20',
+        cancelButtonText: 'إلغاء',
+        confirmButtonText: '<i class="fa-solid fa-paper-plane me-1"></i> إرسال الرابط',
+        focusConfirm: false,
+        preConfirm: () => {
+            const val = document.getElementById('swal-reset-email').value.trim();
+            if (!val) { Swal.showValidationMessage('أدخل البريد الإلكتروني'); return false; }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) { Swal.showValidationMessage('صيغة البريد غير صحيحة'); return false; }
+            return val;
+        }
+    });
     if (!r.value) return;
-    try { await sendPasswordResetEmail(auth, r.value); Swal.fire({ title:'تم الإرسال!', html:`<p>تم إرسال رابط إعادة التعيين إلى <b>${r.value}</b></p>`, icon:'success', confirmButtonColor:'#1b5e20' }); }
-    catch(err) { const m={'auth/user-not-found':'لا يوجد حساب بهذا البريد.','auth/invalid-email':'صيغة البريد خاطئة.'}; Swal.fire('خطأ',m[err.code]||err.message,'error'); }
+    try {
+        // إرسال بدون actionCodeSettings لضمان وصول الإيميل دائماً
+        await sendPasswordResetEmail(auth, r.value);
+        Swal.fire({
+            title: '📧 تم إرسال الرابط!',
+            html: `
+              <div style="font-family:'Cairo',sans-serif;text-align:center;">
+                <p style="font-size:14px;color:#374151;margin-bottom:12px;">
+                  تم إرسال رابط إعادة التعيين إلى:<br>
+                  <b style="color:#1b5e20;">${r.value}</b>
+                </p>
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;font-size:12px;color:#166534;">
+                  <i class="fa-solid fa-circle-info me-1"></i>
+                  افحص بريدك الوارد (Inbox) وكذلك مجلد الـ Spam
+                </div>
+              </div>`,
+            icon: 'success',
+            confirmButtonColor: '#1b5e20',
+            confirmButtonText: 'حسناً'
+        });
+    }
+    catch(err) {
+        const m = {
+            'auth/user-not-found': 'لا يوجد حساب مسجّل بهذا البريد الإلكتروني.',
+            'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
+            'auth/too-many-requests': 'تم إرسال طلبات كثيرة. انتظر قليلاً ثم حاول مجدداً.',
+            'auth/network-request-failed': 'تحقق من اتصالك بالإنترنت وحاول مجدداً.'
+        };
+        Swal.fire({
+            title: 'خطأ',
+            text: m[err.code] || `حدث خطأ غير متوقع: ${err.message}`,
+            icon: 'error',
+            confirmButtonColor: '#1b5e20'
+        });
+    }
 };
 async function autoJoinAllGroupsAsPM() {
     try {
@@ -1094,34 +1144,65 @@ function listenToGroups() {
         select.innerHTML = '<option value="">اختر المجموعة *</option>';
         allGroupsCache = {};
         snap.forEach(d => {
-            const g = d.data(); const admins = g.admins||[g.creator];
-            const isAdmin = currentUserRole==='مدير مشروع'||admins.includes(currentUserEmail)||creator===currentUserEmail;
-            const isMember = (g.members||[]).includes(currentUserEmail) || g.creator===currentUserEmail;
+            const g = d.data();
+            const admins = g.admins || [g.creator];
+            // تصحيح الخطأ: g.creator بدلاً من creator
+            const isAdmin = currentUserRole === 'مدير مشروع' || admins.includes(currentUserEmail) || g.creator === currentUserEmail;
+            const isMember = isAdmin || (g.members||[]).includes(currentUserEmail);
+            const isBanned = !isAdmin && (g.bannedMembers||[]).includes(currentUserEmail);
+            const requested = !isBanned && !isMember && (g.joinRequests||[]).includes(currentUserEmail);
             allGroupsCache[d.id] = { ...g, id:d.id };
+
+            // زر الحالة
+            let statusBadge = '';
+            let actionBtn = '';
+            if (isAdmin) {
+                statusBadge = '<span class="admin-badge"><i class="fa-solid fa-shield-halved me-1"></i>أدمن</span>';
+            } else if (isMember) {
+                statusBadge = '<span class="badge bg-secondary" style="font-size:9px;"><i class="fa-solid fa-check me-1"></i>عضو</span>';
+            } else if (isBanned) {
+                statusBadge = '<span class="badge bg-danger" style="font-size:9px;"><i class="fa-solid fa-ban me-1"></i>محظور</span>';
+            } else if (requested) {
+                statusBadge = '<span class="badge" style="font-size:9px;background:var(--accent-light);color:var(--primary-mid);"><i class="fa-solid fa-clock me-1"></i>قيد المراجعة</span>';
+            } else {
+                statusBadge = '<span class="join-badge"><i class="fa-solid fa-door-open me-1"></i>يمكنك الانضمام</span>';
+            }
+
+            if (!isMember && !isBanned && !requested) {
+                actionBtn = `<button class="btn btn-sm btn-success" onclick="requestJoinGroup('${d.id}','${g.name}')" style="border-radius:8px;font-size:12px;font-family:'Cairo',sans-serif;"><i class="fa-solid fa-user-plus me-1"></i>انضمام</button>`;
+            } else if (isMember) {
+                actionBtn = `<button class="btn btn-sm btn-outline-success" onclick="enterGroupView('${d.id}')" style="border-radius:8px;font-size:12px;font-family:'Cairo',sans-serif;"><i class="fa-solid fa-arrow-right-to-bracket me-1"></i>دخول</button>`;
+            }
+
+            // زر الحذف للمدير أو المنشئ فقط
+            const deleteBtn = (g.creator === currentUserEmail || currentUserRole === 'مدير مشروع')
+                ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('${d.id}')" style="border-radius:8px;" title="حذف الجروب"><i class="fa-solid fa-trash"></i></button>`
+                : '';
+
             container.innerHTML += `
             <div class="col-md-6 mb-3">
                 <div class="card group-card p-3 d-flex flex-row justify-content-between align-items-center bg-white">
                     <div onclick="enterGroupView('${d.id}')" style="cursor:pointer;flex-grow:1;">
                         <div class="d-flex align-items-center gap-2 mb-1">
-                            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;">
+                            <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                                 <i class="fa-solid fa-folder-open text-white" style="font-size:14px;"></i>
                             </div>
                             <div>
                                 <h6 class="fw-bold mb-0" style="color:var(--primary-mid);font-size:14px;">${g.name}</h6>
-                                <span class="text-muted" style="font-size:11px;">المسؤول: ${g.creatorName}</span>
+                                <span class="text-muted" style="font-size:11px;">المسؤول: ${g.creatorName} · ${(g.members||[]).length} عضو</span>
                             </div>
                         </div>
-                        ${isAdmin ? '<span class="admin-badge">أدمن</span>' : isMember ? '<span class="badge bg-secondary" style="font-size:9px;">عضو</span>' : '<span class="join-badge">يمكنك الانضمام</span>'}
+                        ${statusBadge}
                     </div>
-                    <div class="d-flex gap-1">
-                        ${!isMember ? `<button class="btn btn-sm btn-success" onclick="requestJoinGroup('${d.id}','${g.name}')" style="border-radius:8px;font-size:12px;font-family:'Cairo',sans-serif;">انضمام</button>` : ''}
-                        ${(g.creator===currentUserEmail||currentUserRole==='مدير مشروع') ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('${d.id}')" style="border-radius:8px;"><i class="fa-solid fa-trash"></i></button>` : ''}
+                    <div class="d-flex gap-1 align-items-center">
+                        ${actionBtn}
+                        ${deleteBtn}
                     </div>
                 </div>
             </div>`;
+            // إضافة للـ dropdown فقط لو عضو
             if (isMember) select.innerHTML += `<option value="${g.name}">${g.name}</option>`;
         });
-        // إعادة رسم الفيد عند أي تغيير في العضويات
         renderFeed();
     });
 }
@@ -1212,50 +1293,92 @@ window.copyInviteLink = async () => {
 // Check invite code on load
 // ======= PASSWORD RESET VIA EMAIL LINK =======
 let _resetOobCode = null;
+let _resetEmail = null; // البريد الإلكتروني المرتبط بالكود
+
 async function checkPasswordResetMode() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') !== 'resetPassword') return;
     const oobCode = params.get('oobCode');
     if (!oobCode) return;
     try {
-        await verifyPasswordResetCode(auth, oobCode);
+        // verifyPasswordResetCode يُرجع البريد الإلكتروني مباشرة
+        const email = await verifyPasswordResetCode(auth, oobCode);
         _resetOobCode = oobCode;
-        // Hide auth/splash and show the reset overlay
+        _resetEmail = email;
+        // إخفاء كل شيء وإظهار واجهة إعادة التعيين
         document.getElementById("splashScreen").style.display = "none";
         document.getElementById("authContainer").classList.add("d-none");
         document.getElementById("mainPlatform").classList.add("d-none");
         const overlay = document.getElementById("passwordResetOverlay");
         overlay.style.display = "flex";
     } catch(e) {
-        Swal.fire('الرابط منتهي الصلاحية','هذا الرابط لا يعمل بعد الآن. يرجى طلب رابط جديد.','error');
+        // تنظيف الرابط وإظهار رسالة خطأ
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setTimeout(() => {
+            Swal.fire({
+                title: 'الرابط منتهي الصلاحية',
+                html: `<p style="font-family:'Cairo',sans-serif;">هذا الرابط لا يعمل بعد الآن أو تم استخدامه مسبقاً.<br>يرجى طلب رابط جديد.</p>`,
+                icon: 'warning',
+                confirmButtonColor: '#1b5e20',
+                confirmButtonText: 'طلب رابط جديد'
+            }).then(() => window.handleForgotPassword());
+        }, 500);
     }
 }
+
 window.submitPasswordReset = async () => {
     const p1 = document.getElementById("newPasswordInput").value;
     const p2 = document.getElementById("confirmPasswordInput").value;
     const msgEl = document.getElementById("resetPasswordMsg");
+    const saveBtn = document.querySelector('#passwordResetOverlay button[onclick="submitPasswordReset()"]');
     msgEl.style.display = "none";
-    if (p1.length < 6) { msgEl.innerText = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'; msgEl.style.display='block'; return; }
-    if (p1 !== p2) { msgEl.innerText = 'كلمتا المرور غير متطابقتين'; msgEl.style.display='block'; return; }
+
+    if (p1.length < 6) {
+        msgEl.innerText = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+        msgEl.style.display = 'block'; return;
+    }
+    if (p1 !== p2) {
+        msgEl.innerText = 'كلمتا المرور غير متطابقتين، يرجى التأكد';
+        msgEl.style.display = 'block'; return;
+    }
+
+    // إظهار حالة التحميل
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>جاري الحفظ...'; }
+
     try {
+        // 1) تحديث كلمة المرور في Firebase
         await confirmPasswordReset(auth, _resetOobCode, p1);
+
+        // 2) تسجيل الدخول تلقائياً بكلمة المرور الجديدة
+        await signInWithEmailAndPassword(auth, _resetEmail, p1);
+
+        // 3) إخفاء الواجهة وتنظيف الرابط
         document.getElementById("passwordResetOverlay").style.display = "none";
-        // Clean URL and show login
         window.history.replaceState({}, document.title, window.location.pathname);
-        await Swal.fire({
-            title:'تم تغيير كلمة المرور!',
-            html:`<p style="font-family:'Cairo',sans-serif;">يمكنك الآن تسجيل الدخول بكلمة مرورك الجديدة</p>`,
-            icon:'success', confirmButtonColor:'#1b5e20', confirmButtonText:'تسجيل الدخول'
+        _resetOobCode = null; _resetEmail = null;
+
+        // 4) رسالة نجاح — onAuthStateChanged سيشغّل الـ Dashboard تلقائياً
+        Swal.fire({
+            title: '🎉 تم تغيير كلمة المرور!',
+            html: `<p style="font-family:'Cairo',sans-serif;font-size:14px;">تم تسجيل دخولك تلقائياً، مرحباً بك في منصتك!</p>`,
+            icon: 'success',
+            confirmButtonColor: '#1b5e20',
+            confirmButtonText: 'الذهاب للمنصة',
+            timer: 3000,
+            timerProgressBar: true
         });
-        document.getElementById('authContainer').classList.remove('d-none');
-        document.getElementById('loginSection').classList.remove('d-none');
-        document.getElementById('registerSection').classList.add('d-none');
     } catch(e) {
-        msgEl.innerText = 'حدث خطأ أثناء الحفظ. يرجى المحاولة مرة أخرى.';
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-shield-check me-2"></i>حفظ كلمة المرور'; }
+        const errs = {
+            'auth/expired-action-code': 'انتهت صلاحية الرابط، يرجى طلب رابط جديد.',
+            'auth/invalid-action-code': 'الرابط غير صالح أو تم استخدامه مسبقاً.',
+            'auth/weak-password': 'كلمة المرور ضعيفة جداً، استخدم 6 أحرف أو أكثر.'
+        };
+        msgEl.innerText = errs[e.code] || 'حدث خطأ غير متوقع. حاول مرة أخرى.';
         msgEl.style.display = 'block';
     }
 };
-// Call on load
+// فحص الرابط فور تحميل الصفحة
 checkPasswordResetMode();
 
 function checkInviteParam() {
