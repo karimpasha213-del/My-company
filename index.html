@@ -95,8 +95,12 @@
         /* USER CARDS */
         .user-card-grid { transition:var(--transition);border:1px solid var(--border);border-radius:var(--radius-md); }
         .user-card-grid:hover { transform:translateY(-4px);box-shadow:0 10px 30px rgba(0,0,0,0.10);border-color:var(--secondary); }
+        .user-card-grid.has-new-msg { border:2.5px solid var(--danger)!important;box-shadow:0 0 0 4px rgba(229,62,62,0.13)!important; }
+        .user-card-grid.has-new-msg .user-avatar-img { border:2.5px solid var(--danger)!important;box-shadow:0 0 0 3px rgba(229,62,62,0.25)!important; }
         .last-msg-preview { font-size:12px;color:var(--text-muted);cursor:pointer;padding:6px 8px;background:#f8f9fa;border-radius:8px;margin-top:8px;display:none;border-left:3px solid var(--secondary); }
         .last-msg-preview:hover { background:var(--accent-light); }
+        .new-msg-preview-bar { font-size:12px;color:#c0392b;font-weight:700;cursor:pointer;padding:6px 10px;background:#fff0f0;border-radius:8px;margin-top:6px;display:none;border-right:3px solid var(--danger);border-left:none; }
+        .new-msg-preview-bar:hover { background:#ffe4e4; }
 
         /* PROFILE */
         .profile-avatar-clickable { width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid white;cursor:pointer;transition:var(--transition);box-shadow:0 4px 16px rgba(0,0,0,0.15); }
@@ -172,6 +176,22 @@
 
         .clickable-name { cursor:pointer;color:inherit;transition:var(--transition); }
         .clickable-name:hover { text-decoration:underline;color:var(--primary-mid)!important; }
+        .mention-tag {
+            color: #2563eb;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline;
+            background: rgba(37,99,235,0.08);
+            border-radius: 4px;
+            padding: 0px 3px;
+            transition: all 0.18s ease;
+        }
+        .mention-tag:hover {
+            background: rgba(37,99,235,0.16);
+            color: #1d4ed8;
+            text-decoration: underline;
+        }
 
         /* LIGHTBOX */
         .lightbox-overlay { position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.92);z-index:99999;display:none;align-items:center;justify-content:center;cursor:pointer; }
@@ -508,8 +528,8 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" onclick="switchTab('allUsersTab',this);clearChatBadge()">
-                            <div class="nav-icon-wrapper d-inline-block">
-                                <i class="fa-solid fa-comments"></i>
+                            <div style="position:relative;display:inline-block;">
+                                <i class="fa-solid fa-comments" style="display:block;font-size:18px;margin-bottom:3px;"></i>
                                 <span id="chatBadge" class="nav-chat-badge" style="display:none;">0</span>
                             </div>المحادثات
                         </a>
@@ -567,9 +587,6 @@
                             <button class="btn btn-success w-100 fw-bold" onclick="addGroup()" style="border-radius:12px;"><i class="fa-solid fa-plus me-2"></i>تأسيس وحفظ</button>
                             <hr>
                             </div>
-                            <h6 class="fw-bold mb-2"><i class="fa-solid fa-search me-2"></i>البحث في المجموعات</h6>
-                            <input type="text" class="form-control mb-2" id="groupSearchInput" placeholder="ابحث عن مجموعة..." oninput="searchGroups(this.value)">
-                            <div id="groupSearchResults"></div>
                         </div>
                     </div>
                     <div class="col-md-8">
@@ -917,8 +934,7 @@ async function fileToBase64(file, maxSize=900, quality=0.78) {
 }
 
 // ======= GROQ API KEY =======
-// *** ضع مفتاح GROQ هنا بين علامتي الاقتباس ***
-let GROQ_API_KEY = localStorage.getItem('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') || "";
+let GROQ_API_KEY = "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";
 
 // ======= STATE =======
 let currentUserEmail = "", currentUserName = "", currentUserRole = "";
@@ -1064,15 +1080,14 @@ window.addMemberToGroup = async (gid, email, name) => {
 };
 window.leaveCurrentGroup = async () => {
     if (!currentActiveGroup) return;
-    const r = await Swal.fire({ title:'مغادرة الجروب؟', text:'بعد المغادرة لن تتمكن من الانضمام مرة أخرى.', icon:'warning', showCancelButton:true, confirmButtonColor:'#d33', cancelButtonText:'إلغاء', confirmButtonText:'مغادرة' });
+    const r = await Swal.fire({ title:'مغادرة الجروب؟', text:'هل أنت متأكد أنك تريد مغادرة هذا الجروب؟', icon:'warning', showCancelButton:true, confirmButtonColor:'#d33', cancelButtonText:'إلغاء', confirmButtonText:'مغادرة' });
     if (!r.isConfirmed) return;
     try {
         await updateDoc(doc(db,"groups",currentActiveGroup), {
             members: arrayRemove(currentUserEmail),
-            admins: arrayRemove(currentUserEmail),
-            bannedMembers: arrayUnion(currentUserEmail)
+            admins: arrayRemove(currentUserEmail)
         });
-        Swal.fire({ toast:true, position:'top-end', icon:'info', title:'غادرت الجروب', showConfirmButton:false, timer:2000 });
+        Swal.fire({ toast:true, position:'top-end', icon:'info', title:'غادرت الجروب، يمكنك الانضمام مجدداً في أي وقت', showConfirmButton:false, timer:3000 });
         exitGroupView();
     } catch(e) { Swal.fire('خطأ', e.message, 'error'); }
 };
@@ -1356,12 +1371,6 @@ window.searchGroups = (val) => {
 };
 
 window.requestJoinGroup = async (gid, gName) => {
-    // Check if user is banned from this group
-    const gSnap = await getDoc(doc(db,"groups",gid));
-    if (gSnap.exists() && (gSnap.data().bannedMembers||[]).includes(currentUserEmail)) {
-        Swal.fire('تنبيه', 'لقد غادرت هذا الجروب ولا يمكنك الانضمام مجدداً.', 'warning');
-        return;
-    }
     const g = allGroupsCache[gid];
     if (!g) return;
     const requests = g.joinRequests||[];
@@ -1394,8 +1403,23 @@ window.approveJoinRequest = async (gid, email, name, notifId) => {
         body:`تمت الموافقة على انضمامك إلى مجموعة ${gName}.`,
         type:'join_approved', groupId:gid, gName, read:false, createdAt:Date.now()
     });
-    // حذف إشعار طلب الانضمام فور الموافقة
+    // حذف إشعار طلب الانضمام من عند الأدمن الحالي
     if (notifId) await deleteDoc(doc(db,"users",currentUserEmail,"notifications",notifId));
+    // حذف نفس الإشعار من عند باقي الأدمنز أيضاً
+    try {
+        const allAdmins = gData ? [...new Set([...(gData.admins||[]), gData.creator])] : [];
+        for (const adminEmail of allAdmins) {
+            if (adminEmail === currentUserEmail) continue;
+            const notifQ = query(
+                collection(db,"users",adminEmail,"notifications"),
+                where("type","==","join_request"),
+                where("groupId","==",gid),
+                where("requesterEmail","==",email)
+            );
+            const notifSnap = await getDocs(notifQ);
+            notifSnap.forEach(async nd => await deleteDoc(nd.ref));
+        }
+    } catch(e) {}
     Swal.fire({ icon:'success', title:`تم القبول`, text:`تم قبول طلب انضمام ${name} إلى جروب ${gName}`, confirmButtonColor:'#1b5e20' });
 };
 window.rejectJoinRequest = async (gid, email, notifId) => {
@@ -1590,21 +1614,44 @@ function listenToGroupSpecificData(gid, gName, creator, admins, joinRequests, gr
     if (isAdmin) {
         list.innerHTML += `<button class="btn btn-sm btn-outline-success w-100 mb-3 fw-bold" onclick="openAddMemberModal('${gid}','${gName}')" style="border-radius:10px;font-family:'Cairo',sans-serif;"><i class="fa-solid fa-user-plus me-2"></i>إضافة أعضاء</button>`;
     }
+    const roleOrder = {
+        'مدير مشروع': 0,
+        'استشاري هندسي': 2,
+        'مهندس ري محوري': 3,
+        'فني': 4,
+        'عامل': 5
+    };
+    function getMemberSortKey(email) {
+        const u = allUsersCache[email];
+        if (!u) return 99;
+        if (email === creator) return -1; // المنشئ أولاً دائماً
+        const isAdm = admins.includes(email);
+        const roleKey = roleOrder[u.bio] !== undefined ? roleOrder[u.bio] : 6;
+        // لو أدمن وليس مدير مشروع، ترتيبه رقم 1
+        if (isAdm && u.bio !== 'مدير مشروع') return 1;
+        return roleKey;
+    }
     const allMemberEmails = [...new Set([...(groupMembers||[]), creator, ...admins])];
+    allMemberEmails.sort((a, b) => getMemberSortKey(a) - getMemberSortKey(b));
     allMemberEmails.forEach(mEmail => {
         const u = allUsersCache[mEmail]; if (!u) return;
         const uIsAdmin = admins.includes(u.email);
         const uIsCreator = u.email === creator;
+        const uIsPM = u.bio === 'مدير مشروع';
+        // زر المغادرة يظهر فقط للعضو نفسه وليس للمنشئ ولا مدير المشروع
+        const isThisCurrentUser = u.email === currentUserEmail;
+        const canLeaveBtn = isThisCurrentUser && !uIsCreator && !uIsPM;
         list.innerHTML += `<div class="list-group-item d-flex justify-content-between align-items-center rounded mb-2 shadow-sm border-0 bg-light" style="border-radius:10px!important;">
             <div class="d-flex align-items-center gap-2">
                 <img src="${u.avatar}" class="profile-img-nav" style="width:32px;height:32px;border-color:var(--border);cursor:pointer;" onclick="viewUserProfile('${u.email}')">
                 <div><h6 class="small fw-bold mb-0 clickable-name" onclick="viewUserProfile('${u.email}')">${u.name}</h6><span class="badge bg-secondary" style="font-size:9px;">${u.bio}</span></div>
             </div>
-            <div class="d-flex gap-1 flex-wrap">
-                ${uIsCreator ? '<span class="badge bg-success" style="font-size:9px;">منشئ</span>' : u.bio==='مدير مشروع' ? '<span class="badge px-2 py-1" style="font-size:9px;background:#7c3aed;color:white;border-radius:6px;"><i class="fa-solid fa-shield-halved me-1"></i>مدير مشروع</span>' : uIsAdmin ? '<span class="admin-badge">أدمن</span>' : ''}
-                ${isAdmin && !uIsCreator && u.bio !== 'مدير مشروع' ? `
+            <div class="d-flex gap-1 flex-wrap align-items-center">
+                ${uIsCreator ? '<span class="badge bg-success" style="font-size:9px;">منشئ</span>' : uIsPM ? '<span class="badge px-2 py-1" style="font-size:9px;background:#7c3aed;color:white;border-radius:6px;"><i class="fa-solid fa-shield-halved me-1"></i>مدير مشروع</span>' : uIsAdmin ? '<span class="admin-badge">أدمن</span>' : ''}
+                ${isAdmin && !uIsCreator && !uIsPM ? `
                     <button class="btn btn-sm p-1 ${uIsAdmin?'btn-warning':'btn-outline-success'}" style="font-size:10px;border-radius:6px;" onclick="${uIsAdmin?`removeGroupAdmin('${gid}','${u.email}','${u.name}')`:` assignGroupAdmin('${gid}','${u.email}','${u.name}')`}"><i class="fa-solid ${uIsAdmin?'fa-user-minus':'fa-user-shield'}"></i></button>
                     <button class="btn btn-sm btn-outline-danger p-1" style="font-size:10px;border-radius:6px;" onclick="expelUserFromGroup('${gid}','${u.email}','${u.name}','${gName}')"><i class="fa-solid fa-user-xmark"></i></button>` : ''}
+                ${canLeaveBtn ? `<button class="btn btn-sm btn-danger p-1 px-2" style="font-size:10px;border-radius:6px;font-family:'Cairo',sans-serif;" onclick="leaveCurrentGroup()"><i class="fa-solid fa-right-from-bracket me-1"></i>مغادرة</button>` : ''}
             </div></div>`;
     });
     // Join requests for admin
@@ -1751,7 +1798,48 @@ function renderFeed() {
     }
 }
 
-function renderPostCard(postId, post, isAdmin) {
+// ======= RENDER MENTIONS AS CLICKABLE BLUE TAGS =======
+function renderMentions(text) {
+    if (!text) return '';
+    const users = Object.values(allUsersCache).filter(u => u.name);
+    // نرتب الأسماء من الأطول للأقصر لتجنب التعارض
+    users.sort((a, b) => b.name.length - a.name.length);
+
+    // نستبدل كل mention بـ placeholder مؤقت أولاً (لتجنب تعارض HTML)
+    const mentionMap = {};
+    let idx = 0;
+    let result = text;
+
+    for (const u of users) {
+        const variants = [u.name, u.name.replace(/\s+/g, '')];
+        for (const variant of variants) {
+            if (!variant) continue;
+            const escaped = variant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp('@' + escaped + '(?=\\s|$|[^\\w])', 'g');
+            result = result.replace(regex, () => {
+                const key = `__MENTION_${idx}__`;
+                mentionMap[key] = { email: u.email, name: u.name };
+                idx++;
+                return key;
+            });
+        }
+    }
+
+    // أي @ متبقي مجهول - نلونه بدون رابط
+    result = result.replace(/@(\S+)/g,
+        '<a class="mention-tag" style="cursor:default;">@$1</a>'
+    );
+
+    // نحول الـ placeholders لـ <a> links آمنة
+    for (const [key, val] of Object.entries(mentionMap)) {
+        result = result.replace(
+            key,
+            `<a class="mention-tag" onclick="event.preventDefault();event.stopPropagation();viewUserProfile('${val.email}')" title="عرض ملف ${val.name}">@${val.name}</a>`
+        );
+    }
+
+    return result;
+}function renderPostCard(postId, post, isAdmin) {
     const isMyPost = post.userEmail === currentUserEmail;
     const readers = post.readers||[];
     const viewers = post.viewers||[];
@@ -1777,7 +1865,7 @@ function renderPostCard(postId, post, isAdmin) {
                     </div>
                 </div>
             </div>
-            <p class="post-text mb-0">${post.text.replace(/\n/g,'<br>')}</p>
+            <p class="post-text mb-0">${renderMentions(post.text.replace(/\n/g,'<br>'))}</p>
             <div class="post-actions">
                 <button class="read-receipt-btn ${iRead?'active':''}" onclick="markAsRead('${postId}')">
                     ${iRead?'<i class="fa-solid fa-check-double me-1"></i>قرأت':'<i class="fa-regular fa-circle-check me-1"></i>تحديد كمقروء'}
@@ -1785,15 +1873,13 @@ function renderPostCard(postId, post, isAdmin) {
                 <button class="btn btn-sm btn-outline-secondary" onclick="toggleCommentBox('${postId}')" style="border-radius:20px;font-size:12px;font-family:'Cairo',sans-serif;">
                     <i class="fa-regular fa-comment me-1"></i>تعليق
                 </button>
-                <span class="text-muted small ms-auto" style="font-size:11px;">
-                    <i class="fa-solid fa-eye me-1 text-success"></i>${uniqueViewerCount} مشاهدة
-                    &nbsp;|&nbsp;
-                    <i class="fa-solid fa-check-double me-1" style="color:var(--secondary);"></i>${uniqueReaderCount} قراءة
+                <span class="text-muted small ms-auto" style="font-size:11px;cursor:pointer;" onclick="showReadersPopup('${postId}')">
+                    <i class="fa-solid fa-check-double me-1" style="color:var(--secondary);"></i><span id="readerCount_${postId}">${uniqueReaderCount}</span> قراءة
                 </span>
             </div>
-            <div class="viewers-section" id="viewers_${postId}">
-                <i class="fa-solid fa-eye me-1" style="color:var(--secondary);"></i>
-                <b>شاهده:</b> ${uniqueViewerCount > 0 ? [...new Set(viewers.map(v=>v.name))].join('، ') : 'لا أحد بعد'}
+            <div class="viewers-section" id="viewers_${postId}" style="display:none;">
+                <i class="fa-solid fa-check-double me-1" style="color:var(--secondary);"></i>
+                <b>قرأه:</b> ${uniqueReaderCount > 0 ? [...new Set(readers.map(r=>r.name))].join('، ') : 'لا أحد بعد'}
             </div>
             <div id="commentSection_${postId}">
                 <div id="commentsDisplay_${postId}" class="mt-2"></div>
@@ -1823,6 +1909,31 @@ window.deletePost = async (postId) => {
 window.toggleCommentBox = (postId) => {
     const box = document.getElementById(`commentBox_${postId}`);
     if (box) box.style.display = box.style.display==='none'?'block':'none';
+};
+window.showReadersPopup = async (postId) => {
+    const postSnap = await getDoc(doc(db,"posts",postId));
+    if (!postSnap.exists()) return;
+    const readers = postSnap.data().readers || [];
+    const uniqueReaders = [...new Map(readers.map(r=>[r.email,r])).values()];
+    if (!uniqueReaders.length) {
+        Swal.fire({ title:'من ضغط على قرأت', html:'<p class="text-muted">لا أحد ضغط على قرأت بعد.</p>', confirmButtonColor:'#1b5e20', confirmButtonText:'إغلاق' });
+        return;
+    }
+    const html = uniqueReaders.map(r => {
+        const u = allUsersCache[r.email];
+        const avatar = u ? u.avatar : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100';
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;">
+            <img src="${avatar}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid #c3e6cb;">
+            <span style="font-family:'Cairo',sans-serif;font-weight:700;font-size:14px;">${r.name}</span>
+        </div>`;
+    }).join('');
+    Swal.fire({
+        title: `<i class="fa-solid fa-check-double me-2" style="color:var(--secondary);"></i>من ضغط على قرأت (${uniqueReaders.length})`,
+        html: `<div style="text-align:right;max-height:300px;overflow-y:auto;">${html}</div>`,
+        confirmButtonColor: '#1b5e20',
+        confirmButtonText: 'إغلاق',
+        width: 'min(90vw, 400px)'
+    });
 };
 window.markAsRead = async (postId) => {
     const postRef = doc(db,"posts",postId);
@@ -1866,7 +1977,7 @@ function listenToComments(postId, post) {
                     <span class="text-muted" style="font-size:10px;">${getTimeAgo(c.createdAt)}</span>
                     ${isMyComment?`<button class="btn btn-sm p-0 text-danger border-0 ms-auto" onclick="deleteComment('${postId}','${d.id}')" style="font-size:11px;"><i class="fa-solid fa-circle-xmark"></i></button>`:''}
                 </div>
-                <p class="mb-1" style="font-size:13px;">${c.text}</p>
+                <p class="mb-1" style="font-size:13px;">${renderMentions(c.text)}</p>
                 <div class="d-flex align-items-center gap-2">
                     <span class="comment-likes ${(c.likes||[]).includes(currentUserEmail)?'liked':''}" onclick="likeComment('${postId}','${d.id}',this)">
                         <i class="fa-solid fa-heart me-1"></i>${(c.likes||[]).length||''} إعجاب
@@ -1895,13 +2006,30 @@ window.addComment = async (postId) => {
         userAvatar:document.getElementById("navAvatar").src,
         text, likes:[], createdAt:Date.now()
     });
-    // FIX #8: Notify post author on comment
+    // إشعار صاحب المنشور عند التعليق
     if (postData && postData.userEmail !== currentUserEmail) {
         await addDoc(collection(db,"users",postData.userEmail,"notifications"), {
             title:`تعليق جديد على منشورك`,
             body:`${currentUserName}: ${text.substring(0,60)}`,
             type:'comment', postId, read:false, createdAt:Date.now()
         });
+    }
+    // إشعار المنشنز في التعليق
+    const mentions = text.match(/@(\S+)/g);
+    if (mentions) {
+        const notified = new Set();
+        for (const m of mentions) {
+            const mName = m.replace('@','');
+            const matchedUser = Object.values(allUsersCache).find(u => u.name===mName||u.name.includes(mName));
+            if (matchedUser && matchedUser.email !== currentUserEmail && !notified.has(matchedUser.email)) {
+                notified.add(matchedUser.email);
+                await addDoc(collection(db,"users",matchedUser.email,"notifications"), {
+                    title:`تم الإشارة إليك في تعليق`,
+                    body:`أشار إليك ${currentUserName} في تعليق على منشور`,
+                    type:'mention', postId, read:false, createdAt:Date.now()
+                });
+            }
+        }
     }
     input.value = "";
 };
@@ -1912,9 +2040,23 @@ window.deleteComment = async (postId, commentId) => {
 window.likeComment = async (postId, commentId, el) => {
     const ref2 = doc(db,"posts",postId,"comments",commentId);
     const snap = await getDoc(ref2); if (!snap.exists()) return;
-    const likes = snap.data().likes||[];
-    if (likes.includes(currentUserEmail)) { await updateDoc(ref2,{ likes:arrayRemove(currentUserEmail) }); el.classList.remove('liked'); }
-    else { await updateDoc(ref2,{ likes:arrayUnion(currentUserEmail) }); el.classList.add('liked'); }
+    const cData = snap.data();
+    const likes = cData.likes||[];
+    if (likes.includes(currentUserEmail)) {
+        await updateDoc(ref2,{ likes:arrayRemove(currentUserEmail) });
+        el.classList.remove('liked');
+    } else {
+        await updateDoc(ref2,{ likes:arrayUnion(currentUserEmail) });
+        el.classList.add('liked');
+        // إشعار صاحب التعليق لو مش أنا
+        if (cData.userEmail && cData.userEmail !== currentUserEmail) {
+            await addDoc(collection(db,"users",cData.userEmail,"notifications"), {
+                title:`إعجاب بتعليقك`,
+                body:`أعجب ${currentUserName} بتعليقك: ${(cData.text||'').substring(0,50)}`,
+                type:'like', postId, read:false, createdAt:Date.now()
+            });
+        }
+    }
 };
 window.toggleReplyForm = (pid, cid) => { const f=document.getElementById(`replyForm_${cid}`); if(f) f.style.display=f.style.display==='none'?'block':'none'; };
 function listenToReplies(postId, commentId) {
@@ -1929,6 +2071,23 @@ window.addReply = async (postId, commentId) => {
     const input = document.getElementById(`replyInput_${commentId}`);
     const text = input.value.trim(); if (!text) return;
     await addDoc(collection(db,"posts",postId,"comments",commentId,"replies"), { userName:currentUserName, userEmail:currentUserEmail, text, createdAt:Date.now() });
+    // إشعار المنشنز في الرد
+    const mentions = text.match(/@(\S+)/g);
+    if (mentions) {
+        const notifiedR = new Set();
+        for (const m of mentions) {
+            const mName = m.replace('@','');
+            const matchedUser = Object.values(allUsersCache).find(u => u.name===mName||u.name.includes(mName));
+            if (matchedUser && matchedUser.email !== currentUserEmail && !notifiedR.has(matchedUser.email)) {
+                notifiedR.add(matchedUser.email);
+                await addDoc(collection(db,"users",matchedUser.email,"notifications"), {
+                    title:`تم الإشارة إليك في رد`,
+                    body:`أشار إليك ${currentUserName} في رد على تعليق`,
+                    type:'mention', postId, read:false, createdAt:Date.now()
+                });
+            }
+        }
+    }
     input.value = "";
     document.getElementById(`replyForm_${commentId}`).style.display='none';
 };
@@ -1944,10 +2103,14 @@ function listenToMyNotifications() {
         snap.forEach(d => {
             const n = d.data();
             // FIX #7: Chat messages don't go to notifications list, just badge
-            if (n.type==='message') { if (!n.read) chatUnreadCount++; return; }
+            if (n.type==='message') {
+                // الإشعارات بتحسب الـ badge فقط - البوردر والترتيب بيتم عن طريق real-time listener
+                if (!n.read) chatUnreadCount++;
+                return;
+            }
             if (!n.read) notifUnreadCount++;
-            const icons = { post:'fa-newspaper', mention:'fa-at', comment:'fa-comment', join_request:'fa-user-clock', join_approved:'fa-user-check', system:'fa-info-circle', problem:'fa-triangle-exclamation' };
-            const colors = { post:'var(--secondary)', mention:'#2563eb', comment:'#7c3aed', join_request:'#f5a623', join_approved:'var(--secondary)', system:'#64748b', problem:'var(--danger)' };
+            const icons = { post:'fa-newspaper', mention:'fa-at', comment:'fa-comment', like:'fa-heart', join_request:'fa-user-clock', join_approved:'fa-user-check', system:'fa-info-circle', problem:'fa-triangle-exclamation' };
+            const colors = { post:'var(--secondary)', mention:'#2563eb', comment:'#7c3aed', like:'#e53e3e', join_request:'#f5a623', join_approved:'var(--secondary)', system:'#64748b', problem:'var(--danger)' };
             const iconKey = icons[n.type]||'fa-bell';
             const color = colors[n.type]||'var(--secondary)';
             // For join_request notif, show approve/reject buttons + clickable name
@@ -2021,9 +2184,63 @@ window.handleNotifClick = async (notifId) => {
             width: 'min(92vw, 520px)'
         });
     } else if (type === 'post' || type === 'comment' || type === 'mention') {
-        switchTab('feedTab', null);
+        // Navigate to home tab
+        switchTab('homeTab', null);
         document.querySelectorAll('.nav-link').forEach(e => e.classList.remove('active'));
-        document.querySelector('.nav-link[onclick*="feedTab"]')?.classList.add('active');
+        document.getElementById('navHomeLink')?.classList.add('active');
+        if ((type === 'comment' || type === 'mention') && n.postId) {
+            // Wait for feed to render then scroll to post and highlight the comment
+            setTimeout(async () => {
+                const postEl = document.querySelector(`.post-card[data-post-id="${n.postId}"]`);
+                if (postEl) {
+                    postEl.scrollIntoView({ behavior:'smooth', block:'center' });
+                    // Open comment section
+                    const commentBox = document.getElementById(`commentBox_${n.postId}`);
+                    if (commentBox) commentBox.style.display = 'block';
+                    // Wait for comments to load then highlight the one from notif sender
+                    setTimeout(() => {
+                        const commentDisplays = document.querySelectorAll(`#commentsDisplay_${n.postId} .comment-box`);
+                        // Find last comment (the one that triggered the notification)
+                        // Try to match by body text snippet
+                        const bodySnippet = (n.body||'').split(':').pop().trim().substring(0,30).toLowerCase();
+                        let highlighted = false;
+                        commentDisplays.forEach(el => {
+                            const pEl = el.querySelector('p');
+                            if (pEl && pEl.innerText.toLowerCase().includes(bodySnippet)) {
+                                el.style.border = '2px solid #3b82f6';
+                                el.style.borderRadius = '10px';
+                                el.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.15)';
+                                el.scrollIntoView({ behavior:'smooth', block:'center' });
+                                highlighted = true;
+                            }
+                        });
+                        // If not matched by text, highlight the last comment
+                        if (!highlighted && commentDisplays.length > 0) {
+                            const lastComment = commentDisplays[commentDisplays.length - 1];
+                            lastComment.style.border = '2px solid #3b82f6';
+                            lastComment.style.borderRadius = '10px';
+                            lastComment.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.15)';
+                            lastComment.scrollIntoView({ behavior:'smooth', block:'center' });
+                        }
+                    }, 800);
+                } else if (n.postId) {
+                    // Post might not be visible yet - try scrolling to load it
+                    setTimeout(() => {
+                        const postEl2 = document.querySelector(`.post-card[data-post-id="${n.postId}"]`);
+                        if (postEl2) {
+                            postEl2.scrollIntoView({ behavior:'smooth', block:'center' });
+                            const commentBox2 = document.getElementById(`commentBox_${n.postId}`);
+                            if (commentBox2) commentBox2.style.display = 'block';
+                        }
+                    }, 800);
+                }
+            }, 400);
+        } else if (n.postId) {
+            setTimeout(() => {
+                const postEl = document.querySelector(`.post-card[data-post-id="${n.postId}"]`);
+                if (postEl) postEl.scrollIntoView({ behavior:'smooth', block:'center' });
+            }, 400);
+        }
     }
 };
 window.markAllNotificationsRead = async () => {
@@ -2106,16 +2323,6 @@ function listenToAIChatMessages(roomId) {
     });
 }
 window.askGroqAI = async () => {
-    if (!GROQ_API_KEY) {
-        const ok = await Swal.fire({ title:'مطلوب مفتاح GROQ API', text:'يجب إدخال مفتاح API للتحدث مع جروك.', icon:'warning', showCancelButton:true, confirmButtonColor:'#1b5e20', cancelButtonText:'لاحقاً', confirmButtonText:'إدخال المفتاح الآن' });
-        if (ok.isConfirmed) {
-            const r = await Swal.fire({ title:'مفتاح GROQ API', input:'password', inputPlaceholder:'gsk_...', showCancelButton:true, confirmButtonColor:'#1b5e20', cancelButtonText:'إلغاء', confirmButtonText:'حفظ',
-                preConfirm: (v) => { if(!v){ Swal.showValidationMessage('يجب إدخال المفتاح'); return false; } return v; }
-            });
-            if (r.value) { GROQ_API_KEY=r.value; localStorage.setItem('groq_api_key',r.value); }
-            else return;
-        } else return;
-    }
     const queryText = document.getElementById("aiInput").value.trim();
     if (!queryText) return;
     document.getElementById("aiInput").value = "";
@@ -2135,14 +2342,51 @@ window.askGroqAI = async () => {
     chatBox.innerHTML += `<div id="${typingId}" class="text-start my-2"><span class="small text-muted d-block mb-1"><i class="fa-solid fa-robot me-1" style="color:var(--gold);"></i>جروك AI</span><div class="ai-typing bg-white border rounded-4 d-inline-flex"><span></span><span></span><span></span></div></div>`;
     chatBox.scrollTop = chatBox.scrollHeight;
     try {
+        // جلب تاريخ المحادثة (آخر 20 رسالة) لإرسالها للـ AI كـ context
+        const historySnap = await getDocs(query(
+            collection(db,"users",currentUserEmail,"ai_rooms",roomId,"messages"),
+            orderBy("createdAt","asc"),
+            limit(20)
+        ));
+        const historyMessages = [];
+        historySnap.forEach(d => {
+            const m = d.data();
+            // تجاهل آخر رسالة المستخدم لأننا سنضيفها منفصلة
+            if (m.sender === "user") {
+                historyMessages.push({ role: "user", content: m.text });
+            } else if (m.sender === "ai") {
+                // تنظيف HTML tags من رد الـ AI قبل إرساله
+                const cleanText = m.text.replace(/<[^>]+>/g, '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+                historyMessages.push({ role: "assistant", content: cleanText });
+            }
+        });
+        // إزالة آخر رسالة مستخدم من التاريخ (هي queryText الحالية) لتجنب التكرار
+        if (historyMessages.length > 0 && historyMessages[historyMessages.length-1].role === "user") {
+            historyMessages.pop();
+        }
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROQ_API_KEY}` },
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
                 messages: [
-                    { role: "system", content: "أنت مساعد هندسي خبير في أنظمة الري المحوري والسنتر بيفوت لمنصة AgriLink Pro. أجب بدقة علمية باللغة العربية فقط." },
-                    { role: "user", content: `يتحدث إليك: ${currentUserName} - ${currentUserRole}. السؤال: ${queryText}` }
+                    { role: "system", content: `أنت مساعد هندسي متخصص ومتعمق جداً في منصة AgriLink Pro. تخصصاتك الأساسية:
+
+1. **هندسة شبكات الري**: حسابات الضغط والتدفق، معادلة هازن ويليامز وداراسي وايزباخ، فقد الضغط في الأنابيب، تصميم شبكات التوزيع، أنظمة الري بالتنقيط والرش والمحاور المركزية (سنتر بيفوت)، المضخات وخصائصها، وحدات الترشيح والتحكم، حسابات التوحيد ومعامل كريستيانسن، معدلات الاستهلاك المائي للمحاصيل، جداول الري، كفاءة التوزيع.
+
+2. **هندسة اللاندسكيب**: تصميم المسطحات الخضراء وأنظمة الري الخاصة بها، اختيار النباتات وفق المناخ والتربة، حسابات احتياجات المياه للمساحات الخضراء، تصميم شبكات صرف المياه، أنظمة الإضاءة الخارجية، الطرق والممرات، عناصر التصميم البيئي.
+
+3. **قواعد عملك الصارمة**:
+- لديك تاريخ كامل للمحادثة الحالية، استخدمه للإجابة بدقة وتماسك.
+- لا تجيب على أي سؤال فني بدون أن تكون متأكداً 100% من المعلومة.
+- إذا كان لديك أي شك في رقم أو معادلة أو مواصفة، صرّح بذلك واطلب من المستخدم التحقق من المصدر.
+- استشهد بالمعادلات والمعايير القياسية (ISO, ASABE, ASCE) عند الإجابة.
+- أجب بدقة علمية باللغة العربية فقط.
+- إذا كان السؤال خارج نطاق تخصصك، قل ذلك صراحة بدلاً من الاختراع.
+- قدم الحسابات خطوة بخطوة مع وحدات القياس.
+المستخدم الحالي: ${currentUserName} - ${currentUserRole}` },
+                    ...historyMessages,
+                    { role: "user", content: queryText }
                 ],
                 temperature: 0.7,
                 max_tokens: 1024
@@ -2162,28 +2406,117 @@ window.askGroqAI = async () => {
 };
 
 // ======= ALL USERS =======
+// تخزين بيانات آخر رسالة لكل مستخدم { time, text, sender, hasUnread }
+const userLastMsgData = {};
+const chatRoomListeners = {};
+
 function listenToAllUsers() {
     onSnapshot(collection(db,"users"), snap => {
-        const cont = document.getElementById("allUsersContainer");
-        const prev = document.getElementById("profileUsersPreview");
-        cont.innerHTML = ""; if (prev) prev.innerHTML = "";
         snap.forEach(d => {
-            const u = d.data(); allUsersCache[u.email] = u;
-            if (u.email===currentUserEmail) return;
-            const card = buildUserCard(u);
-            cont.innerHTML += card;
-            if (prev) prev.innerHTML += card;
+            const u = d.data();
+            allUsersCache[u.email] = u;
+            if (u.email === currentUserEmail) return;
+            const safeId = u.email.replace(/[@.]/g,'_');
+            // بناء الكارت مرة واحدة فقط
+            if (!document.getElementById(`card_${safeId}`)) {
+                buildAndInsertUserCard(u);
+                // ابدأ listener حقيقي للمحادثة مع هذا المستخدم
+                startChatRoomListener(u.email, u.name);
+            }
         });
-        // Load last messages for each user card
-        setTimeout(() => loadLastMessages(), 500);
     });
 }
 
+function buildAndInsertUserCard(u) {
+    const safeId = u.email.replace(/[@.]/g,'_');
+    const cont = document.getElementById("allUsersContainer");
+    const prev = document.getElementById("profileUsersPreview");
+    const html = buildUserCard(u);
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html;
+    const col = wrapper.firstElementChild;
+    if (cont) cont.appendChild(col);
+
+    if (prev) {
+        const wrapper2 = document.createElement('div');
+        wrapper2.innerHTML = html.replace(`id="col_${safeId}"`, `id="colPrev_${safeId}"`).replace(`id="card_${safeId}"`, `id="cardPrev_${safeId}"`);
+        prev.appendChild(wrapper2.firstElementChild);
+    }
+}
+
+// Listener حقيقي على آخر رسالة في كل محادثة
+function startChatRoomListener(otherEmail, otherName) {
+    if (chatRoomListeners[otherEmail]) return; // لا تعمل listener مكرر
+    const roomId = currentUserEmail < otherEmail
+        ? `${currentUserEmail}_${otherEmail}`
+        : `${otherEmail}_${currentUserEmail}`;
+    const q = query(collection(db,"chats",roomId,"messages"), orderBy("createdAt","desc"), limit(1));
+    const unsub = onSnapshot(q, snap => {
+        if (snap.empty) return;
+        const m = snap.docs[0].data();
+        const msgTime = m.createdAt || 0;
+        const isIncoming = m.sender !== currentUserEmail;
+        const isUnread = isIncoming && m.status !== 'read';
+        const safeId = otherEmail.replace(/[@.]/g,'_');
+
+        // تحديث بيانات آخر رسالة
+        userLastMsgData[otherEmail] = { time: msgTime, text: m.text, sender: m.sender, hasUnread: isUnread };
+
+        // تحديث الكارت
+        updateUserCard(otherEmail, otherName, m, isUnread);
+        // ترتيب الكروت
+        sortUserCards();
+    });
+    chatRoomListeners[otherEmail] = unsub;
+}
+
+function updateUserCard(email, name, msg, isUnread) {
+    const safeId = email.replace(/[@.]/g,'_');
+    const card   = document.getElementById(`card_${safeId}`);
+    const bar    = document.getElementById(`newMsgBar_${safeId}`);
+    const lastEl = document.getElementById(`lastMsg_${safeId}`);
+    if (!card) return;
+
+    const prefix = msg.sender === currentUserEmail ? 'أنت: ' : '';
+    const preview = `${prefix}${msg.text.substring(0,55)}${msg.text.length>55?'...':''}`; 
+
+    if (isUnread) {
+        // بوردر أحمر + نص الرسالة الجديدة
+        card.classList.add('has-new-msg');
+        if (bar) {
+            bar.style.display = 'block';
+            bar.innerHTML = `<i class="fa-solid fa-envelope me-1"></i><b>${name}:</b> ${msg.text.substring(0,55)}${msg.text.length>55?'..':''}`;
+        }
+        if (lastEl) lastEl.style.display = 'none';
+    } else {
+        // آخر رسالة عادية
+        card.classList.remove('has-new-msg');
+        if (bar) { bar.style.display = 'none'; bar.innerHTML = ''; }
+        if (lastEl) {
+            lastEl.style.display = 'block';
+            lastEl.innerHTML = `<i class="fa-solid fa-comment-dots me-1" style="color:var(--secondary);"></i>${preview}`;
+        }
+    }
+    // تحديث وقت الكارت للترتيب
+    const col = document.getElementById(`col_${safeId}`);
+    if (col) col.dataset.lastMsgTime = msg.createdAt || 0;
+}
+
+function sortUserCards() {
+    const cont = document.getElementById("allUsersContainer");
+    if (!cont) return;
+    const cols = Array.from(cont.querySelectorAll(':scope > [id^="col_"]'));
+    cols.sort((a,b) => (parseInt(b.dataset.lastMsgTime)||0) - (parseInt(a.dataset.lastMsgTime)||0));
+    cols.forEach(col => cont.appendChild(col));
+}
+
 function buildUserCard(u) {
-    return `<div class="col-md-6 mb-3">
-        <div class="card p-3 user-card-grid bg-white">
+    const safeId = u.email.replace(/[@.]/g,'_');
+    return `<div class="col-md-6 mb-3" id="col_${safeId}" data-last-msg-time="0">
+        <div class="card p-3 user-card-grid bg-white" id="card_${safeId}">
             <div class="d-flex align-items-center mb-3 gap-3">
-                <img src="${u.avatar}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--accent-light);cursor:pointer;flex-shrink:0;" onclick="viewUserProfile('${u.email}')">
+                <img src="${u.avatar}" class="user-avatar-img" id="avatar_${safeId}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--accent-light);cursor:pointer;flex-shrink:0;transition:var(--transition);" onclick="viewUserProfile('${u.email}')">
                 <div style="min-width:0;flex:1;">
                     <h6 class="fw-bold text-dark mb-0 clickable-name" onclick="viewUserProfile('${u.email}')" style="font-size:14px;">${u.name}</h6>
                     <span style="color:var(--secondary);font-size:12px;font-weight:700;"><i class="fa-solid fa-briefcase me-1"></i>${u.bio}</span>
@@ -2193,8 +2526,10 @@ function buildUserCard(u) {
                     </div>
                 </div>
             </div>
-            <!-- FIX #4: Last message preview -->
-            <div class="last-msg-preview" id="lastMsg_${u.email.replace(/[@.]/g,'_')}" onclick="openDirectChat('${u.email}','${u.name}')"></div>
+            <!-- رسالة جديدة واردة - بوردر أحمر + نص ظاهر -->
+            <div class="new-msg-preview-bar" id="newMsgBar_${safeId}" onclick="openDirectChat('${u.email}','${u.name}')"></div>
+            <!-- آخر رسالة عادية -->
+            <div class="last-msg-preview" id="lastMsg_${safeId}" onclick="openDirectChat('${u.email}','${u.name}')"></div>
             <div class="d-flex gap-2 justify-content-end mt-2">
                 <button class="btn btn-sm btn-outline-success" onclick="openDirectChat('${u.email}','${u.name}')" style="border-radius:10px;font-family:'Cairo',sans-serif;font-size:12px;"><i class="fa-solid fa-comments me-1"></i>رسالة</button>
                 <button class="btn btn-sm btn-outline-primary" onclick="startVoiceCall('${u.email}','${u.name}')" style="border-radius:10px;" title="مكالمة صوتية"><i class="fa-solid fa-phone"></i></button>
@@ -2204,26 +2539,6 @@ function buildUserCard(u) {
     </div>`;
 }
 
-async function loadLastMessages() {
-    for (const u of Object.values(allUsersCache)) {
-        if (u.email===currentUserEmail) continue;
-        const roomId = currentUserEmail<u.email ? `${currentUserEmail}_${u.email}` : `${u.email}_${currentUserEmail}`;
-        try {
-            const q = query(collection(db,"chats",roomId,"messages"), orderBy("createdAt","desc"), limit(1));
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-                const m = snap.docs[0].data();
-                const elId = `lastMsg_${u.email.replace(/[@.]/g,'_')}`;
-                const el = document.getElementById(elId);
-                if (el) {
-                    el.style.display = "block";
-                    const prefix = m.sender===currentUserEmail?'أنت: ':'';
-                    el.innerHTML = `<i class="fa-solid fa-comment-dots me-1" style="color:var(--secondary);"></i>${prefix}${m.text.substring(0,50)}${m.text.length>50?'...':''}`;
-                }
-            }
-        } catch(e) {}
-    }
-}
 
 // ======= DIRECT CHAT WITH MESSAGE STATUS =======
 window.openDirectChat = (email, name) => {
@@ -2232,6 +2547,15 @@ window.openDirectChat = (email, name) => {
     if (wrapper) { wrapper.style.border = ''; const _b=wrapper.querySelector('.dm-unread-badge'); if(_b) _b.style.display='none'; }
     if (!perUserUnreadDM) perUserUnreadDM = {};
     delete perUserUnreadDM[email];
+
+    // إزالة البوردر الأحمر فوراً عند فتح المحادثة
+    const safeId = email.replace(/[@.]/g,'_');
+    const card = document.getElementById(`card_${safeId}`);
+    const bar  = document.getElementById(`newMsgBar_${safeId}`);
+    const lastEl = document.getElementById(`lastMsg_${safeId}`);
+    if (card) card.classList.remove('has-new-msg');
+    if (bar)  { bar.style.display = 'none'; bar.innerHTML = ''; }
+    if (lastEl) lastEl.style.display = 'block';
     targetChatUserEmail = email;
     currentChatRoomId = currentUserEmail<email?`${currentUserEmail}_${email}`:`${email}_${currentUserEmail}`;
     document.getElementById("chatModalTitle").innerText = `محادثة مع ${name}`;
@@ -2289,6 +2613,7 @@ window.sendDirectMessage = async () => {
     const text = input.value.trim(); input.value = "";
     try {
         await addDoc(collection(db,"chats",currentChatRoomId,"messages"),{ sender:currentUserEmail, text, status:'sent', createdAt:Date.now() });
+        // FIX #7: (الترتيب والكارت بيتحدثوا تلقائياً عن طريق real-time listener)
         // FIX #7: Only send badge notification, not in notifications list
         await addDoc(collection(db,"users",targetChatUserEmail,"notifications"),{
             title:`رسالة جديدة من ${currentUserName}`, body:text.substring(0,60),
@@ -2558,8 +2883,17 @@ function startCallTimer() {
 }
 
 // ======= USER PROFILE MODAL (FIX #14, #15, #17) =======
-window.viewUserProfile = (email) => {
-    const u = allUsersCache[email]; if (!u) return;
+window.viewUserProfile = (emailOrName) => {
+    // نحاول نلاقي المستخدم بالـ email أو بالاسم
+    let u = allUsersCache[emailOrName];
+    if (!u) {
+        u = Object.values(allUsersCache).find(x =>
+            x.name === emailOrName ||
+            x.name.replace(/\s+/g,'') === emailOrName ||
+            x.name.toLowerCase() === (emailOrName||'').toLowerCase()
+        );
+    }
+    if (!u) return;
     document.getElementById("userProfileModalBody").innerHTML = `
         <img src="${u.avatar}" class="user-profile-avatar mb-3" onclick="openLightbox('${u.avatar}')">
         <h4 class="fw-bold text-dark">${u.name}</h4>
@@ -2660,15 +2994,16 @@ window.handleMention = (textarea) => {
     if (!users.length) { dd.style.display="none"; return; }
     const rect = textarea.getBoundingClientRect();
     dd.style.cssText = `position:fixed;top:${rect.bottom+4}px;right:${window.innerWidth-rect.right}px;left:auto;z-index:99999;display:block;`;
-    dd.innerHTML = users.slice(0,6).map(u=>`<div class="mention-item" onmousedown="event.preventDefault();insertMention('${u.name}')">
+    dd.innerHTML = users.slice(0,6).map(u=>`<div class="mention-item" onmousedown="event.preventDefault();insertMention('${u.name}','${u.email}')">
         <img src="${u.avatar}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;">
         <div><div class="fw-bold small">${u.name}</div><div class="text-muted" style="font-size:10px;">${u.bio}</div></div>
     </div>`).join('');
 };
-window.insertMention = (name) => {
+window.insertMention = (name, email) => {
     const ta = currentMentionInput||document.getElementById("postText");
     const text = ta.value, cursor = ta.selectionStart, lastAt = text.lastIndexOf('@', cursor-1);
     if (lastAt===-1) return;
+    // نخزن الاسم كامل في النص - renderMentions ستتعامل معه
     ta.value = text.substring(0,lastAt)+'@'+name+' '+text.substring(cursor);
     ta.focus(); const nc=lastAt+name.length+2; ta.selectionStart=ta.selectionEnd=nc;
     document.getElementById("mentionDropdown").style.display="none";
