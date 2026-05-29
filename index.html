@@ -2484,7 +2484,7 @@ async function downloadExcelFromTable(items, projectName) {
                 const buf = await resp.arrayBuffer();
                 const ext = src.endsWith('.jpg') ? 'jpeg' : 'png';
                 const imgId = workbook.addImage({ buffer: buf, extension: ext });
-                sheet.addImage(imgId, { tl: { col: 0, row: 0 }, br: { col: COL_COUNT, row: 4 }, editAs: 'oneCell' });
+                sheet.addImage(imgId, { tl: { col: 2, row: 0 }, br: { col: 7, row: 6 }, editAs: 'oneCell' });
                 logoCell.value = '';
                 logoLoaded = true;
                 break;
