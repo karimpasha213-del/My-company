@@ -1008,6 +1008,7 @@ let videoMuted = false, videoCamOff = false;
 let _callLogEntry = null; // { type, direction, peerName, peerEmail, peerAvatar, startedAt }
 let _missedCallCount = 0;
 let _incomingCallMissedUnsub = null;
+let _iceUnsubs = []; // track ICE candidate listeners to prevent leaks
 // Ringtone (Web Audio API – no external files)
 let _ringtoneCtx = null, _ringtoneTimer = null;
 function _playRingtone(isIncoming) {
@@ -3616,22 +3617,28 @@ async function initiateCall(targetEmail, targetName, callType) {
     try {
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
     } catch(err) {
-        if (callType === 'فيديو' && (err.name === 'NotFoundError' || err.name === 'NotReadableError' || err.name === 'OverconstrainedError')) {
-            // No camera — fallback to audio-only for video call
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            Swal.fire({ icon:'error', title:'تم رفض الإذن', text:'يرجى السماح للمتصفح بالوصول إلى الميكروفون والكاميرا.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+            return;
+        }
+        if (callType === 'فيديو') {
+            // Any camera error → fallback to audio-only (covers NotFoundError, NotReadableError,
+            // OverconstrainedError, DevicesNotFoundError, TrackStartError, AbortError, etc.)
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false });
                 Swal.fire({ toast:true, position:'top-end', icon:'warning', title:'لا توجد كاميرا – سيتم الاتصال صوتياً فقط', showConfirmButton:false, timer:3500 });
             } catch(err2) {
-                Swal.fire({ icon:'error', title:'خطأ في الوصول للميكروفون', text:'يرجى السماح للمتصفح بالوصول إلى الميكروفون.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+                if (err2.name === 'NotAllowedError') {
+                    Swal.fire({ icon:'error', title:'تم رفض الإذن', text:'يرجى السماح للمتصفح بالوصول إلى الميكروفون.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+                } else {
+                    Swal.fire({ icon:'error', title:'لا يوجد ميكروفون', text:'تعذر الوصول للميكروفون. تأكد من توصيله.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+                }
                 return;
             }
-        } else if (err.name === 'NotAllowedError') {
-            Swal.fire({ icon:'error', title:'تم رفض الإذن', text:'يرجى السماح للمتصفح بالوصول إلى الميكروفون والكاميرا.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
-            return;
         } else {
             let msg = 'يرجى السماح بالوصول وإعادة المحاولة.';
-            if (err.name === 'NotFoundError')    msg = 'لم يُعثر على ميكروفون.';
-            if (err.name === 'NotReadableError') msg = 'الجهاز مستخدم من تطبيق آخر.';
+            if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') msg = 'لم يُعثر على ميكروفون. تأكد من توصيله.';
+            if (err.name === 'NotReadableError' || err.name === 'TrackStartError')   msg = 'الجهاز مستخدم من تطبيق آخر.';
             Swal.fire({ icon:'error', title:'خطأ في الوصول للأجهزة', text:msg, confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
             return;
         }
@@ -3647,14 +3654,16 @@ async function initiateCall(targetEmail, targetName, callType) {
     peerConnection = new RTCPeerConnection(STUN);
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-    // Remote track handler
+    // Remote track handler — route audio to remoteAudio, video to remoteVideo separately
+    const _remoteStream = new MediaStream();
     peerConnection.ontrack = e => {
-        const stream = e.streams && e.streams[0] ? e.streams[0] : new MediaStream([e.track]);
-        const remoteAudio = document.getElementById("remoteAudio");
-        if (remoteAudio) { remoteAudio.srcObject = stream; remoteAudio.volume = 1; remoteAudio.play().catch(()=>{}); }
-        if (callType==='فيديو') {
+        _remoteStream.addTrack(e.track);
+        if (e.track.kind === 'audio') {
+            const ra = document.getElementById("remoteAudio");
+            if (ra) { ra.srcObject = _remoteStream; ra.volume = 1; ra.play().catch(()=>{}); }
+        } else if (e.track.kind === 'video') {
             const rv = document.getElementById("remoteVideo");
-            if (rv) { rv.srcObject = stream; rv.play().catch(()=>{}); }
+            if (rv) { rv.srcObject = _remoteStream; rv.play().catch(()=>{}); }
         }
     };
 
@@ -3681,18 +3690,26 @@ async function initiateCall(targetEmail, targetName, callType) {
         }
     };
 
+    // Create call doc first so we have callId before setLocalDescription
     const callRef = await addDoc(collection(db,"calls"),{
         caller:currentUserEmail, callerName:currentUserName, callerAvatar:document.getElementById("navAvatar").src,
         callee:targetEmail, calleeName:targetName,
         type:callType, status:'calling', createdAt:Date.now()
     });
     currentCallId = callRef.id;
-    const offer = await peerConnection.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: callType==='فيديو' });
-    await peerConnection.setLocalDescription(offer);
-    await updateDoc(callRef,{ offer:{ sdp:offer.sdp, type:offer.type } });
+
+    // *** CRITICAL FIX: set onicecandidate BEFORE setLocalDescription ***
+    // ICE gathering starts immediately on setLocalDescription — any handler set after
+    // it may miss candidates that fired before the await returned, causing ICE failure.
     peerConnection.onicecandidate = async e => {
-        if (e.candidate) await addDoc(collection(db,"calls",currentCallId,"callerCandidates"), e.candidate.toJSON());
+        if (e.candidate && currentCallId) {
+            await addDoc(collection(db,"calls",currentCallId,"callerCandidates"), e.candidate.toJSON());
+        }
     };
+
+    const offer = await peerConnection.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: callType==='فيديو' });
+    await peerConnection.setLocalDescription(offer); // ICE gathering starts — handler already set!
+    await updateDoc(callRef,{ offer:{ sdp:offer.sdp, type:offer.type } });
     // Show outgoing call overlay + play ringtone
     document.getElementById("callOverlay").classList.add("active");
     document.getElementById("callName").innerText = targetName;
@@ -3722,11 +3739,11 @@ async function initiateCall(targetEmail, targetName, callType) {
         if (data.status==='rejected') { _stopRingtone(); Swal.fire({ toast:true, position:'top-end', icon:'info', title:'الاتصال مرفوض', showConfirmButton:false, timer:2000 }); endCall(); }
         if (data.status==='ended') endCall();
     });
-    onSnapshot(collection(db,"calls",currentCallId,"calleeCandidates"), snap => {
+    _iceUnsubs.push(onSnapshot(collection(db,"calls",currentCallId,"calleeCandidates"), snap => {
         snap.docChanges().forEach(change => {
             if (change.type==='added') peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data())).catch(()=>{});
         });
-    });
+    }));
 }
 
 function listenToIncomingCalls() {
@@ -3775,7 +3792,9 @@ function showIncomingCall(callId, callData) {
 
 window.acceptCall = async () => {
     _stopRingtone();
-    const callSnap = await getDoc(doc(db,"calls",currentCallId));
+    const localCallId = currentCallId; // capture immutable — avoids race with missed-call watcher
+    if (!localCallId) return; // call already ended before we could accept
+    const callSnap = await getDoc(doc(db,"calls",localCallId));
     const callData = callSnap.data();
     currentCallType = callData.type;
     const audioConstraints = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 };
@@ -3785,22 +3804,27 @@ window.acceptCall = async () => {
         : { audio: audioConstraints, video: false };
     try { localStream = await navigator.mediaDevices.getUserMedia(constraints); }
     catch(err) {
-        if (callData.type === 'فيديو' && (err.name === 'NotFoundError' || err.name === 'NotReadableError' || err.name === 'OverconstrainedError')) {
-            // No camera on this device — fallback to audio-only
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            Swal.fire({ icon:'error', title:'تم رفض الإذن', text:'يرجى السماح للمتصفح بالوصول إلى الميكروفون.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+            return;
+        }
+        if (callData.type === 'فيديو') {
+            // Any camera error → fallback to audio-only
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false });
                 Swal.fire({ toast:true, position:'top-end', icon:'warning', title:'لا توجد كاميرا – سيتم الرد صوتياً فقط', showConfirmButton:false, timer:3500 });
             } catch(err2) {
-                Swal.fire({ icon:'error', title:'خطأ في الوصول للميكروفون', text:'يرجى السماح للمتصفح بالوصول إلى الميكروفون.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+                if (err2.name === 'NotAllowedError') {
+                    Swal.fire({ icon:'error', title:'تم رفض الإذن', text:'يرجى السماح للمتصفح بالوصول إلى الميكروفون.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+                } else {
+                    Swal.fire({ icon:'error', title:'لا يوجد ميكروفون', text:'تعذر الوصول للميكروفون. تأكد من توصيله.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+                }
                 return;
             }
-        } else if (err.name === 'NotAllowedError') {
-            Swal.fire({ icon:'error', title:'تم رفض الإذن', text:'يرجى السماح للمتصفح بالوصول إلى الميكروفون.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
-            return;
         } else {
             let msg = 'يرجى السماح بالوصول وإعادة المحاولة.';
-            if (err.name === 'NotFoundError')    msg = 'لم يُعثر على ميكروفون.';
-            if (err.name === 'NotReadableError') msg = 'الجهاز مستخدم من تطبيق آخر.';
+            if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') msg = 'لم يُعثر على ميكروفون. تأكد من توصيله.';
+            if (err.name === 'NotReadableError' || err.name === 'TrackStartError')   msg = 'الجهاز مستخدم من تطبيق آخر.';
             Swal.fire({ icon:'error', title:'خطأ في الوصول للأجهزة', text:msg, confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
             return;
         }
@@ -3817,17 +3841,19 @@ window.acceptCall = async () => {
     }
     peerConnection = new RTCPeerConnection(STUN);
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+    const _remoteStreamCallee = new MediaStream();
     peerConnection.ontrack = e => {
-        const stream = e.streams && e.streams[0] ? e.streams[0] : new MediaStream([e.track]);
-        const remoteAudio = document.getElementById("remoteAudio");
-        if (remoteAudio) { remoteAudio.srcObject = stream; remoteAudio.volume = 1; remoteAudio.play().catch(()=>{}); }
-        if (callData.type==='فيديو') {
+        _remoteStreamCallee.addTrack(e.track);
+        if (e.track.kind === 'audio') {
+            const ra = document.getElementById("remoteAudio");
+            if (ra) { ra.srcObject = _remoteStreamCallee; ra.volume = 1; ra.play().catch(()=>{}); }
+        } else if (e.track.kind === 'video') {
             const rv = document.getElementById("remoteVideo");
-            if (rv) { rv.srcObject = stream; rv.play().catch(()=>{}); }
+            if (rv) { rv.srcObject = _remoteStreamCallee; rv.play().catch(()=>{}); }
         }
     };
     peerConnection.onicecandidate = async e => {
-        if (e.candidate) await addDoc(collection(db,"calls",currentCallId,"calleeCandidates"), e.candidate.toJSON());
+        if (e.candidate) await addDoc(collection(db,"calls",localCallId,"calleeCandidates"), e.candidate.toJSON());
     };
     peerConnection.oniceconnectionstatechange = () => {
         const state = peerConnection ? peerConnection.iceConnectionState : '';
@@ -3847,22 +3873,31 @@ window.acceptCall = async () => {
     try {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(callData.offer));
     } catch(e) { Swal.fire('خطأ','فشل إنشاء الاتصال، يرجى المحاولة مجدداً.','error'); endCall(); return; }
+    // Abort if caller hung up while we were getting media
+    if (!currentCallId) { endCall(); return; }
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
-    await updateDoc(doc(db,"calls",currentCallId),{ answer:{ sdp:answer.sdp, type:answer.type }, status:'active' });
-    onSnapshot(collection(db,"calls",currentCallId,"callerCandidates"), snap => {
+    await updateDoc(doc(db,"calls",localCallId),{ answer:{ sdp:answer.sdp, type:answer.type }, status:'active' });
+    _iceUnsubs.push(onSnapshot(collection(db,"calls",localCallId,"callerCandidates"), snap => {
         snap.docChanges().forEach(c => {
             if (c.type==='added') peerConnection.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(()=>{});
         });
-    });
-    callUnsubscribe = onSnapshot(doc(db,"calls",currentCallId), snap => {
+    }));
+    callUnsubscribe = onSnapshot(doc(db,"calls",localCallId), snap => {
         const d = snap.data();
         if (!d) return;
         if (d.status==='ended') endCall();
     });
     document.getElementById("callOverlay").classList.remove("active");
-    if (callData.type==='فيديو') {
+    const hasLocalVideo = localStream && localStream.getVideoTracks().length > 0;
+    if (callData.type==='فيديو' && hasLocalVideo) {
+        // Both sides have video — show full video UI
         showVideoCallUI(callData.callerName);
+    } else if (callData.type==='فيديو' && !hasLocalVideo) {
+        // Callee has no camera (audio fallback) — show video overlay so caller's video is visible,
+        // but also show audio bar for controls
+        showVideoCallUI(callData.callerName);
+        // localVideo will be empty (no camera) — that's fine
     } else {
         const bar = document.getElementById("activeCallBar");
         if (bar) { bar.style.display = "flex"; document.getElementById("activeCallName").innerText = callData.callerName; }
@@ -3890,6 +3925,8 @@ window.endCall = async () => {
     if (idToEnd) {
         try { await updateDoc(doc(db,"calls",idToEnd),{ status:'ended' }); } catch{}
     }
+    // Clean up all ICE candidate listeners
+    _iceUnsubs.forEach(u => { try { u(); } catch{} }); _iceUnsubs = [];
     if (peerConnection) { peerConnection.oniceconnectionstatechange = null; peerConnection.onconnectionstatechange = null; peerConnection.ontrack = null; peerConnection.close(); peerConnection = null; }
     if (localStream) { localStream.getTracks().forEach(t=>t.stop()); localStream = null; }
     document.getElementById("callOverlay").classList.remove("active");
