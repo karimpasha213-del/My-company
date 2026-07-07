@@ -392,8 +392,8 @@
         <div style="font-size:11px;color:#94a3b8;margin-top:8px;font-family:'Cairo',sans-serif;">قبول</div>
       </div>
     </div>
-    <audio id="remoteAudio" autoplay></audio>
-    <audio id="localAudio" autoplay muted></audio>
+    <audio id="remoteAudio" autoplay playsinline style="display:none;"></audio>
+    <audio id="localAudio" autoplay muted playsinline style="display:none;"></audio>
   </div>
 </div>
 
@@ -978,7 +978,59 @@ let perUserUnreadDM = {};
 let localStream = null, peerConnection = null, currentCallId = null, callUnsubscribe = null;
 let currentCallType = 'صوتية'; // track call type for UI
 let videoMuted = false, videoCamOff = false;
-const STUN = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+// Ringtone (Web Audio API – no external files)
+let _ringtoneCtx = null, _ringtoneTimer = null;
+function _playRingtone(isIncoming) {
+    _stopRingtone();
+    try {
+        _ringtoneCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function _tone(freq, start, dur, vol) {
+            const osc = _ringtoneCtx.createOscillator();
+            const gain = _ringtoneCtx.createGain();
+            osc.connect(gain); gain.connect(_ringtoneCtx.destination);
+            osc.type = 'sine'; osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0, _ringtoneCtx.currentTime + start);
+            gain.gain.linearRampToValueAtTime(vol, _ringtoneCtx.currentTime + start + 0.05);
+            gain.gain.linearRampToValueAtTime(vol * 0.8, _ringtoneCtx.currentTime + start + dur - 0.08);
+            gain.gain.linearRampToValueAtTime(0, _ringtoneCtx.currentTime + start + dur);
+            osc.start(_ringtoneCtx.currentTime + start);
+            osc.stop(_ringtoneCtx.currentTime + start + dur + 0.05);
+        }
+        function _doRing() {
+            if (!_ringtoneCtx) return;
+            if (isIncoming) {
+                // ثلاث نغمات خفيفة متتالية
+                _tone(880, 0.0,  0.18, 0.10);
+                _tone(1100, 0.22, 0.18, 0.10);
+                _tone(880, 0.44, 0.18, 0.10);
+            } else {
+                // نغمة واحدة هادئة للاتصال الصادر
+                _tone(660, 0.0, 0.4, 0.08);
+            }
+        }
+        _doRing();
+        _ringtoneTimer = setInterval(_doRing, isIncoming ? 2200 : 3200);
+    } catch(e) {}
+}
+function _stopRingtone() {
+    if (_ringtoneTimer) { clearInterval(_ringtoneTimer); _ringtoneTimer = null; }
+    if (_ringtoneCtx) { try { _ringtoneCtx.close(); } catch {} _ringtoneCtx = null; }
+}
+const STUN = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+        { urls: 'stun:openrelay.metered.ca:80' },
+        { urls: 'stun:stun.stunprotocol.org:3478' },
+        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+    ],
+    iceCandidatePoolSize: 10
+};
 
 function saveTab(t) { sessionStorage.setItem('agri_tab', t); }
 function restoreTab() {
@@ -1074,8 +1126,8 @@ window.handleRegister = async (e) => {
     try {
         await createUserWithEmailAndPassword(auth, email, pass);
         const defaultAvatar = gender === 'ذكر'
-            ? 'https://raw.githubusercontent.com/karimpasha213-del/My-company/main/ph2.png'
-            : 'https://raw.githubusercontent.com/karimpasha213-del/My-company/main/ph3.png';
+            ? 'https://raw.githubusercontent.com/karimamr123/ph1/main/ph2.png'
+            : 'https://raw.githubusercontent.com/karimamr123/ph1/main/ph3.png';
         await setDoc(doc(db,"users",email), { name, email, bio:role, phone, gender, avatar:defaultAvatar, createdAt:Date.now() });
         Swal.fire({ title:'تم الإنشاء!', text:`أهلاً بك ${name}`, icon:'success', confirmButtonColor:'#1b5e20' });
     } catch(err) {
@@ -3525,62 +3577,104 @@ window.startVideoCall = async (email, name) => { await initiateCall(email, name,
 
 async function initiateCall(targetEmail, targetName, callType) {
     currentCallType = callType;
+    // Better media constraints: high quality audio + noise suppression
+    const audioConstraints = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 };
+    const videoConstraints = { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' };
+    const constraints = callType==='فيديو'
+        ? { video: videoConstraints, audio: audioConstraints }
+        : { audio: audioConstraints, video: false };
     try {
-        const constraints = callType==='فيديو' ? { video:true, audio:true } : { audio:true, video:false };
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
-        document.getElementById("localAudio").srcObject = localStream;
-        if (callType==='فيديو') {
-            document.getElementById("localVideo").srcObject = localStream;
-        }
     } catch(err) {
-        Swal.fire('خطأ في الكاميرا/الميكروفون', 'يرجى السماح بالوصول وإعادة المحاولة.', 'error'); return;
+        let msg = 'يرجى السماح بالوصول وإعادة المحاولة.';
+        if (err.name === 'NotFoundError')    msg = 'لم يُعثر على كاميرا أو ميكروفون. تأكد من توصيل الأجهزة.';
+        if (err.name === 'NotAllowedError')  msg = 'تم رفض الإذن. يرجى السماح للمتصفح بالوصول إلى الميكروفون والكاميرا.';
+        if (err.name === 'NotReadableError') msg = 'الكاميرا أو الميكروفون مستخدم من تطبيق آخر. أغلقه وحاول مجدداً.';
+        Swal.fire({ icon: 'error', title: 'خطأ في الوصول للأجهزة', text: msg, confirmButtonText: 'حسناً', confirmButtonColor: '#0d4f1c' });
+        return;
+    }
+    const localAudioEl = document.getElementById("localAudio");
+    if (localAudioEl) { localAudioEl.srcObject = localStream; }
+    if (callType==='فيديو') {
+        const lv = document.getElementById("localVideo");
+        if (lv) lv.srcObject = localStream;
     }
     peerConnection = new RTCPeerConnection(STUN);
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+    // Remote track handler
     peerConnection.ontrack = e => {
-        const stream = e.streams[0];
-        document.getElementById("remoteAudio").srcObject = stream;
+        const stream = e.streams && e.streams[0] ? e.streams[0] : new MediaStream([e.track]);
+        const remoteAudio = document.getElementById("remoteAudio");
+        if (remoteAudio) { remoteAudio.srcObject = stream; remoteAudio.volume = 1; remoteAudio.play().catch(()=>{}); }
         if (callType==='فيديو') {
-            document.getElementById("remoteVideo").srcObject = stream;
+            const rv = document.getElementById("remoteVideo");
+            if (rv) { rv.srcObject = stream; rv.play().catch(()=>{}); }
         }
     };
+
+    // ICE connection state monitoring
+    peerConnection.oniceconnectionstatechange = () => {
+        const state = peerConnection ? peerConnection.iceConnectionState : '';
+        const statusEl = document.getElementById("callStatus");
+        if (state === 'checking') {
+            if (statusEl) statusEl.innerText = 'جاري التحقق من الاتصال...';
+        } else if (state === 'connected' || state === 'completed') {
+            _stopRingtone();
+            if (statusEl) statusEl.innerText = 'متصل ✓';
+        } else if (state === 'disconnected') {
+            if (statusEl) statusEl.innerText = 'انقطع الاتصال، جاري إعادة المحاولة...';
+        } else if (state === 'failed') {
+            if (statusEl) statusEl.innerText = 'فشل الاتصال';
+            if (peerConnection) peerConnection.restartIce();
+        }
+    };
+    peerConnection.onconnectionstatechange = () => {
+        if (peerConnection && peerConnection.connectionState === 'failed') {
+            endCall();
+            Swal.fire({ toast:true, position:'top-end', icon:'warning', title:'فشل الاتصال، يرجى المحاولة مرة أخرى.', showConfirmButton:false, timer:3000 });
+        }
+    };
+
     const callRef = await addDoc(collection(db,"calls"),{
         caller:currentUserEmail, callerName:currentUserName, callerAvatar:document.getElementById("navAvatar").src,
         callee:targetEmail, calleeName:targetName,
         type:callType, status:'calling', createdAt:Date.now()
     });
     currentCallId = callRef.id;
-    const offer = await peerConnection.createOffer();
+    const offer = await peerConnection.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: callType==='فيديو' });
     await peerConnection.setLocalDescription(offer);
     await updateDoc(callRef,{ offer:{ sdp:offer.sdp, type:offer.type } });
     peerConnection.onicecandidate = async e => {
         if (e.candidate) await addDoc(collection(db,"calls",currentCallId,"callerCandidates"), e.candidate.toJSON());
     };
-    // Show outgoing call overlay
+    // Show outgoing call overlay + play ringtone
     document.getElementById("callOverlay").classList.add("active");
     document.getElementById("callName").innerText = targetName;
     document.getElementById("callType").innerText = callType==='فيديو'?'مكالمة فيديو':'مكالمة صوتية';
     document.getElementById("callStatus").innerText = 'جاري الاتصال...';
     document.getElementById("callAvatar").src = allUsersCache[targetEmail]?.avatar||'';
     const _caw2 = document.getElementById("callAcceptWrapper"); if(_caw2) _caw2.style.display='none';
+    _playRingtone(false); // soft outgoing ringtone
     callUnsubscribe = onSnapshot(doc(db,"calls",currentCallId), async snap => {
         const data = snap.data();
         if (!data) return;
         if (data.answer && !peerConnection.currentRemoteDescription) {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            try {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            } catch(e) { console.warn('setRemoteDescription error:', e); return; }
+            _stopRingtone();
             document.getElementById("callStatus").innerText = 'متصل ✓';
-            // Hide incoming overlay and show call UI
             document.getElementById("callOverlay").classList.remove("active");
             if (callType==='فيديو') {
                 showVideoCallUI(targetName);
             } else {
                 const bar = document.getElementById("activeCallBar");
-                bar.style.display = "flex";
-                document.getElementById("activeCallName").innerText = targetName;
+                if (bar) { bar.style.display = "flex"; document.getElementById("activeCallName").innerText = targetName; }
             }
             startCallTimer();
         }
-        if (data.status==='rejected') { Swal.fire({ toast:true, position:'top-end', icon:'info', title:'الاتصال مرفوض', showConfirmButton:false, timer:2000 }); endCall(); }
+        if (data.status==='rejected') { _stopRingtone(); Swal.fire({ toast:true, position:'top-end', icon:'info', title:'الاتصال مرفوض', showConfirmButton:false, timer:2000 }); endCall(); }
         if (data.status==='ended') endCall();
     });
     onSnapshot(collection(db,"calls",currentCallId,"calleeCandidates"), snap => {
@@ -3612,42 +3706,74 @@ function showIncomingCall(callId, callData) {
     document.getElementById("callAvatar").src = callData.callerAvatar||'';
     const _caw = document.getElementById("callAcceptWrapper"); if(_caw) _caw.style.display='block';
     const _cab = document.getElementById("callAcceptBtn"); if(_cab) _cab.style.display='flex';
+    _playRingtone(true); // soft incoming ringtone
 }
 
 window.acceptCall = async () => {
+    _stopRingtone();
     const callSnap = await getDoc(doc(db,"calls",currentCallId));
     const callData = callSnap.data();
     currentCallType = callData.type;
-    const constraints = callData.type==='فيديو' ? { video:true, audio:true } : { audio:true, video:false };
+    const audioConstraints = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 };
+    const videoConstraints = { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' };
+    const constraints = callData.type==='فيديو'
+        ? { video: videoConstraints, audio: audioConstraints }
+        : { audio: audioConstraints, video: false };
     try { localStream = await navigator.mediaDevices.getUserMedia(constraints); }
-    catch { Swal.fire('خطأ','لم يتم السماح بالوصول للكاميرا أو الميكروفون','error'); return; }
-    document.getElementById("localAudio").srcObject = localStream;
+    catch(err) {
+        let msg = 'يرجى السماح بالوصول وإعادة المحاولة.';
+        if (err.name === 'NotFoundError')    msg = 'لم يُعثر على كاميرا أو ميكروفون.';
+        if (err.name === 'NotAllowedError')  msg = 'تم رفض الإذن. يرجى السماح للمتصفح بالوصول.';
+        if (err.name === 'NotReadableError') msg = 'الجهاز مستخدم من تطبيق آخر.';
+        Swal.fire({ icon:'error', title:'خطأ في الوصول للأجهزة', text:msg, confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+        return;
+    }
+    const localAudioEl = document.getElementById("localAudio");
+    if (localAudioEl) localAudioEl.srcObject = localStream;
     if (callData.type==='فيديو') {
-        document.getElementById("localVideo").srcObject = localStream;
+        const lv = document.getElementById("localVideo");
+        if (lv) lv.srcObject = localStream;
     }
     peerConnection = new RTCPeerConnection(STUN);
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
     peerConnection.ontrack = e => {
-        const stream = e.streams[0];
-        document.getElementById("remoteAudio").srcObject = stream;
+        const stream = e.streams && e.streams[0] ? e.streams[0] : new MediaStream([e.track]);
+        const remoteAudio = document.getElementById("remoteAudio");
+        if (remoteAudio) { remoteAudio.srcObject = stream; remoteAudio.volume = 1; remoteAudio.play().catch(()=>{}); }
         if (callData.type==='فيديو') {
-            document.getElementById("remoteVideo").srcObject = stream;
+            const rv = document.getElementById("remoteVideo");
+            if (rv) { rv.srcObject = stream; rv.play().catch(()=>{}); }
         }
     };
     peerConnection.onicecandidate = async e => {
         if (e.candidate) await addDoc(collection(db,"calls",currentCallId,"calleeCandidates"), e.candidate.toJSON());
     };
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(callData.offer));
+    peerConnection.oniceconnectionstatechange = () => {
+        const state = peerConnection ? peerConnection.iceConnectionState : '';
+        const statusEl = document.getElementById("callStatus");
+        if (state === 'failed') {
+            if (peerConnection) peerConnection.restartIce();
+        } else if (state === 'disconnected') {
+            if (statusEl) statusEl.innerText = 'انقطع الاتصال، جاري إعادة المحاولة...';
+        }
+    };
+    peerConnection.onconnectionstatechange = () => {
+        if (peerConnection && peerConnection.connectionState === 'failed') {
+            endCall();
+            Swal.fire({ toast:true, position:'top-end', icon:'warning', title:'انقطع الاتصال.', showConfirmButton:false, timer:3000 });
+        }
+    };
+    try {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(callData.offer));
+    } catch(e) { Swal.fire('خطأ','فشل إنشاء الاتصال، يرجى المحاولة مجدداً.','error'); endCall(); return; }
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
     await updateDoc(doc(db,"calls",currentCallId),{ answer:{ sdp:answer.sdp, type:answer.type }, status:'active' });
-    // Caller candidates
     onSnapshot(collection(db,"calls",currentCallId,"callerCandidates"), snap => {
         snap.docChanges().forEach(c => {
             if (c.type==='added') peerConnection.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(()=>{});
         });
     });
-    // Listen for call end from the other party
     callUnsubscribe = onSnapshot(doc(db,"calls",currentCallId), snap => {
         const d = snap.data();
         if (!d) return;
@@ -3658,12 +3784,12 @@ window.acceptCall = async () => {
         showVideoCallUI(callData.callerName);
     } else {
         const bar = document.getElementById("activeCallBar");
-        bar.style.display = "flex";
-        document.getElementById("activeCallName").innerText = callData.callerName;
+        if (bar) { bar.style.display = "flex"; document.getElementById("activeCallName").innerText = callData.callerName; }
     }
     startCallTimer();
 };
 window.rejectCall = async () => {
+    _stopRingtone();
     if (currentCallId) await updateDoc(doc(db,"calls",currentCallId),{ status:'rejected' });
     document.getElementById("callOverlay").classList.remove("active");
     currentCallId = null;
@@ -3672,6 +3798,7 @@ let _callEnding = false;
 window.endCall = async () => {
     if (_callEnding) return; // prevent double-call
     _callEnding = true;
+    _stopRingtone();
     // Unsubscribe FIRST so we don't receive our own 'ended' status back
     if (callUnsubscribe) { callUnsubscribe(); callUnsubscribe = null; }
     if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
@@ -3681,13 +3808,15 @@ window.endCall = async () => {
     if (idToEnd) {
         try { await updateDoc(doc(db,"calls",idToEnd),{ status:'ended' }); } catch{}
     }
-    if (peerConnection) { peerConnection.close(); peerConnection = null; }
+    if (peerConnection) { peerConnection.oniceconnectionstatechange = null; peerConnection.onconnectionstatechange = null; peerConnection.ontrack = null; peerConnection.close(); peerConnection = null; }
     if (localStream) { localStream.getTracks().forEach(t=>t.stop()); localStream = null; }
     document.getElementById("callOverlay").classList.remove("active");
     document.getElementById("activeCallBar").style.display = "none";
     document.getElementById("videoCallOverlay").style.display = "none";
-    const rv = document.getElementById("remoteVideo"); if(rv) rv.srcObject = null;
-    const lv = document.getElementById("localVideo"); if(lv) lv.srcObject = null;
+    const rv = document.getElementById("remoteVideo"); if(rv) { rv.srcObject = null; }
+    const lv = document.getElementById("localVideo"); if(lv) { lv.srcObject = null; }
+    const ra = document.getElementById("remoteAudio"); if(ra) { ra.srcObject = null; }
+    const la = document.getElementById("localAudio"); if(la) { la.srcObject = null; }
     videoMuted = false; videoCamOff = false;
     _callEnding = false;
 };
