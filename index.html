@@ -330,6 +330,24 @@
         }
         .btn-reset-submit:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 6px 18px rgba(27,94,32,0.5); }
         .btn-reset-submit:disabled { opacity:0.65; cursor:not-allowed; transform:none; }
+        /* ===== CALL LOG STYLES ===== */
+        .cl-item { display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);transition:var(--transition);position:relative; }
+        .cl-item:hover { background:#f8fafb; }
+        .cl-item.missed { border-right:4px solid var(--danger);background:#fff5f5; }
+        .cl-item.missed .cl-name { color:var(--danger); }
+        .cl-avatar { width:46px;height:46px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2.5px solid var(--border); }
+        .cl-avatar.missed-ring { border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(229,62,62,0.18)!important; }
+        .cl-dir { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0; }
+        .cl-dir.out { background:#e8f5e9;color:#1b6e2e; }
+        .cl-dir.inc { background:#e3f2fd;color:#1565c0; }
+        .cl-dir.mis { background:#fff0f0;color:var(--danger); }
+        .cl-name { font-weight:700;font-size:14px;font-family:'Cairo',sans-serif; }
+        .cl-meta { font-size:11px;color:var(--text-muted);font-family:'Cairo',sans-serif;margin-top:1px; }
+        .cl-type { font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;flex-shrink:0; }
+        .cl-type.vid { background:#e3f2fd;color:#1565c0; }
+        .cl-type.voc { background:#e8f5e9;color:#1b6e2e; }
+        .cl-type.mis { background:#fff0f0;color:var(--danger); }
+        .cl-dur { font-size:11px;color:var(--text-muted);flex-shrink:0;font-family:'Cairo',sans-serif;white-space:nowrap; }
     </style>
 </head>
 <body>
@@ -543,6 +561,14 @@
                         </a>
                     </li>
                     <li class="nav-item"><a class="nav-link" style="color:#fcd34d!important;" onclick="switchTab('aiTab',this)"><i class="fa-solid fa-robot" style="color:#fcd34d;"></i>جروك AI</a></li>
+                    <li class="nav-item">
+                        <a class="nav-link" onclick="openCallLog(this)">
+                            <div style="position:relative;display:inline-block;">
+                                <i class="fa-solid fa-phone-volume" style="display:block;font-size:18px;margin-bottom:3px;"></i>
+                                <span id="missedCallBadge" class="nav-chat-badge" style="display:none;">0</span>
+                            </div>السجل
+                        </a>
+                    </li>
                 </ul>
                 <div class="d-flex align-items-center gap-2 py-2 py-lg-0">
                     <div class="navbar-search">
@@ -978,6 +1004,10 @@ let perUserUnreadDM = {};
 let localStream = null, peerConnection = null, currentCallId = null, callUnsubscribe = null;
 let currentCallType = 'صوتية'; // track call type for UI
 let videoMuted = false, videoCamOff = false;
+// Call log tracking
+let _callLogEntry = null; // { type, direction, peerName, peerEmail, peerAvatar, startedAt }
+let _missedCallCount = 0;
+let _incomingCallMissedUnsub = null;
 // Ringtone (Web Audio API – no external files)
 let _ringtoneCtx = null, _ringtoneTimer = null;
 function _playRingtone(isIncoming) {
@@ -3586,13 +3616,28 @@ async function initiateCall(targetEmail, targetName, callType) {
     try {
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
     } catch(err) {
-        let msg = 'يرجى السماح بالوصول وإعادة المحاولة.';
-        if (err.name === 'NotFoundError')    msg = 'لم يُعثر على كاميرا أو ميكروفون. تأكد من توصيل الأجهزة.';
-        if (err.name === 'NotAllowedError')  msg = 'تم رفض الإذن. يرجى السماح للمتصفح بالوصول إلى الميكروفون والكاميرا.';
-        if (err.name === 'NotReadableError') msg = 'الكاميرا أو الميكروفون مستخدم من تطبيق آخر. أغلقه وحاول مجدداً.';
-        Swal.fire({ icon: 'error', title: 'خطأ في الوصول للأجهزة', text: msg, confirmButtonText: 'حسناً', confirmButtonColor: '#0d4f1c' });
-        return;
+        if (callType === 'فيديو' && (err.name === 'NotFoundError' || err.name === 'NotReadableError' || err.name === 'OverconstrainedError')) {
+            // No camera — fallback to audio-only for video call
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false });
+                Swal.fire({ toast:true, position:'top-end', icon:'warning', title:'لا توجد كاميرا – سيتم الاتصال صوتياً فقط', showConfirmButton:false, timer:3500 });
+            } catch(err2) {
+                Swal.fire({ icon:'error', title:'خطأ في الوصول للميكروفون', text:'يرجى السماح للمتصفح بالوصول إلى الميكروفون.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+                return;
+            }
+        } else if (err.name === 'NotAllowedError') {
+            Swal.fire({ icon:'error', title:'تم رفض الإذن', text:'يرجى السماح للمتصفح بالوصول إلى الميكروفون والكاميرا.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+            return;
+        } else {
+            let msg = 'يرجى السماح بالوصول وإعادة المحاولة.';
+            if (err.name === 'NotFoundError')    msg = 'لم يُعثر على ميكروفون.';
+            if (err.name === 'NotReadableError') msg = 'الجهاز مستخدم من تطبيق آخر.';
+            Swal.fire({ icon:'error', title:'خطأ في الوصول للأجهزة', text:msg, confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+            return;
+        }
     }
+    // Log outgoing call
+    _callLogEntry = { type: callType, direction: 'outgoing', peerName: targetName, peerEmail: targetEmail, peerAvatar: allUsersCache[targetEmail]?.avatar||'', startedAt: null };
     const localAudioEl = document.getElementById("localAudio");
     if (localAudioEl) { localAudioEl.srcObject = localStream; }
     if (callType==='فيديو') {
@@ -3707,6 +3752,25 @@ function showIncomingCall(callId, callData) {
     const _caw = document.getElementById("callAcceptWrapper"); if(_caw) _caw.style.display='block';
     const _cab = document.getElementById("callAcceptBtn"); if(_cab) _cab.style.display='flex';
     _playRingtone(true); // soft incoming ringtone
+    // Watch for missed call: if call ends before we accept
+    let _accepted = false;
+    if (_incomingCallMissedUnsub) { _incomingCallMissedUnsub(); _incomingCallMissedUnsub = null; }
+    _incomingCallMissedUnsub = onSnapshot(doc(db,"calls",callId), snap => {
+        const d = snap.data();
+        if (!d) return;
+        if ((d.status === 'ended' || d.status === 'rejected') && !_accepted) {
+            // Caller hung up — missed call
+            _saveCallLog({ type: callData.type, direction: 'incoming', peerName: callData.callerName, peerEmail: callData.caller, peerAvatar: callData.callerAvatar||'', startedAt: null, duration: null, status: 'missed', endedAt: Date.now() });
+            _incrementMissedBadge();
+            document.getElementById("callOverlay").classList.remove("active");
+            _stopRingtone();
+            currentCallId = null;
+            if (_incomingCallMissedUnsub) { _incomingCallMissedUnsub(); _incomingCallMissedUnsub = null; }
+        } else if (d.status === 'active') {
+            _accepted = true; // we accepted — don't mark as missed
+            if (_incomingCallMissedUnsub) { _incomingCallMissedUnsub(); _incomingCallMissedUnsub = null; }
+        }
+    });
 }
 
 window.acceptCall = async () => {
@@ -3721,13 +3785,30 @@ window.acceptCall = async () => {
         : { audio: audioConstraints, video: false };
     try { localStream = await navigator.mediaDevices.getUserMedia(constraints); }
     catch(err) {
-        let msg = 'يرجى السماح بالوصول وإعادة المحاولة.';
-        if (err.name === 'NotFoundError')    msg = 'لم يُعثر على كاميرا أو ميكروفون.';
-        if (err.name === 'NotAllowedError')  msg = 'تم رفض الإذن. يرجى السماح للمتصفح بالوصول.';
-        if (err.name === 'NotReadableError') msg = 'الجهاز مستخدم من تطبيق آخر.';
-        Swal.fire({ icon:'error', title:'خطأ في الوصول للأجهزة', text:msg, confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
-        return;
+        if (callData.type === 'فيديو' && (err.name === 'NotFoundError' || err.name === 'NotReadableError' || err.name === 'OverconstrainedError')) {
+            // No camera on this device — fallback to audio-only
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false });
+                Swal.fire({ toast:true, position:'top-end', icon:'warning', title:'لا توجد كاميرا – سيتم الرد صوتياً فقط', showConfirmButton:false, timer:3500 });
+            } catch(err2) {
+                Swal.fire({ icon:'error', title:'خطأ في الوصول للميكروفون', text:'يرجى السماح للمتصفح بالوصول إلى الميكروفون.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+                return;
+            }
+        } else if (err.name === 'NotAllowedError') {
+            Swal.fire({ icon:'error', title:'تم رفض الإذن', text:'يرجى السماح للمتصفح بالوصول إلى الميكروفون.', confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+            return;
+        } else {
+            let msg = 'يرجى السماح بالوصول وإعادة المحاولة.';
+            if (err.name === 'NotFoundError')    msg = 'لم يُعثر على ميكروفون.';
+            if (err.name === 'NotReadableError') msg = 'الجهاز مستخدم من تطبيق آخر.';
+            Swal.fire({ icon:'error', title:'خطأ في الوصول للأجهزة', text:msg, confirmButtonText:'حسناً', confirmButtonColor:'#0d4f1c' });
+            return;
+        }
     }
+    // Log incoming call
+    _callLogEntry = { type: callData.type, direction: 'incoming', peerName: callData.callerName, peerEmail: callData.caller, peerAvatar: callData.callerAvatar||'', startedAt: null };
+    // Cancel missed-call watcher since we accepted
+    if (_incomingCallMissedUnsub) { _incomingCallMissedUnsub(); _incomingCallMissedUnsub = null; }
     const localAudioEl = document.getElementById("localAudio");
     if (localAudioEl) localAudioEl.srcObject = localStream;
     if (callData.type==='فيديو') {
@@ -3790,6 +3871,7 @@ window.acceptCall = async () => {
 };
 window.rejectCall = async () => {
     _stopRingtone();
+    if (_incomingCallMissedUnsub) { _incomingCallMissedUnsub(); _incomingCallMissedUnsub = null; }
     if (currentCallId) await updateDoc(doc(db,"calls",currentCallId),{ status:'rejected' });
     document.getElementById("callOverlay").classList.remove("active");
     currentCallId = null;
@@ -3818,6 +3900,13 @@ window.endCall = async () => {
     const ra = document.getElementById("remoteAudio"); if(ra) { ra.srcObject = null; }
     const la = document.getElementById("localAudio"); if(la) { la.srcObject = null; }
     videoMuted = false; videoCamOff = false;
+    // Save to call log
+    if (_callLogEntry) {
+        const dur = _callLogEntry.startedAt ? Math.round((Date.now() - _callLogEntry.startedAt) / 1000) : null;
+        _saveCallLog({ ..._callLogEntry, duration: dur, status: dur !== null ? 'completed' : 'cancelled', endedAt: Date.now() });
+        _callLogEntry = null;
+    }
+    if (_incomingCallMissedUnsub) { _incomingCallMissedUnsub(); _incomingCallMissedUnsub = null; }
     _callEnding = false;
 };
 window.endVideoCall = () => endCall();
@@ -3882,6 +3971,7 @@ window.addParticipantToCall = async () => {
     }
 };
 function startCallTimer() {
+    if (_callLogEntry) _callLogEntry.startedAt = Date.now();
     let seconds = 0;
     callTimerInterval = setInterval(() => {
         seconds++;
@@ -4141,6 +4231,100 @@ async function loadTodayAchievements() {
     } catch {}
 }
 
+// ======= CALL LOG =======
+function _formatDuration(seconds) {
+    if (!seconds || seconds < 1) return '';
+    const m = Math.floor(seconds / 60), s = seconds % 60;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function _formatCallTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    const yesterday = new Date(now); yesterday.setDate(now.getDate()-1);
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+    const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    if (isToday) return `اليوم ${timeStr}`;
+    if (isYesterday) return `أمس ${timeStr}`;
+    return `${d.getDate()}/${d.getMonth()+1} ${timeStr}`;
+}
+async function _saveCallLog(entry) {
+    if (!currentUserEmail || !db) return;
+    try {
+        await addDoc(collection(db,"users",currentUserEmail,"callLog"), entry);
+    } catch(e) {}
+}
+function _incrementMissedBadge() {
+    _missedCallCount++;
+    const b = document.getElementById("missedCallBadge");
+    if (b) { b.innerText = _missedCallCount; b.style.display = 'flex'; }
+}
+window.openCallLog = async (el) => {
+    // Reset missed badge when user opens log
+    _missedCallCount = 0;
+    const b = document.getElementById("missedCallBadge");
+    if (b) b.style.display = 'none';
+    // Load from Firestore
+    const container = document.getElementById("callLogContainer");
+    container.innerHTML = '<div class="text-center py-4 text-muted" style="font-family:Cairo,sans-serif;"><i class="fa-solid fa-spinner fa-spin fa-2x mb-2"></i><br>جاري التحميل...</div>';
+    new bootstrap.Modal(document.getElementById('callLogModal')).show();
+    try {
+        const snap = await getDocs(query(collection(db,"users",currentUserEmail,"callLog"), orderBy("endedAt","desc"), limit(50)));
+        if (snap.empty) {
+            container.innerHTML = '<div class="text-center py-5 text-muted"><i class="fa-solid fa-phone-slash fa-3x mb-3 opacity-25"></i><p style="font-family:Cairo,sans-serif;">لا توجد مكالمات بعد.</p></div>';
+            return;
+        }
+        let html = '';
+        snap.forEach(d => {
+            const c = d.data();
+            const isMissed = c.status === 'missed';
+            const isOut = c.direction === 'outgoing';
+            let dirClass = isOut ? 'out' : 'inc';
+            let dirIcon = isOut ? '<i class="fa-solid fa-arrow-up-left"></i>' : '<i class="fa-solid fa-arrow-down-right"></i>';
+            let dirLabel = isOut ? 'صادرة' : 'واردة';
+            if (isMissed) { dirClass = 'mis'; dirIcon = '<i class="fa-solid fa-phone-missed"></i>'; dirLabel = 'فائتة'; }
+            const typeLabel = c.type === 'فيديو' ? 'فيديو' : 'صوت';
+            const typeClass = isMissed ? 'mis' : (c.type === 'فيديو' ? 'vid' : 'voc');
+            const durStr = c.duration ? _formatDuration(c.duration) : '';
+            const timeStr = _formatCallTime(c.endedAt);
+            const avatarClass = isMissed ? 'cl-avatar missed-ring' : 'cl-avatar';
+            html += `<div class="cl-item ${isMissed?'missed':''}">
+                <img src="${c.peerAvatar||''}" class="${avatarClass}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(c.peerName||'?')}&background=38a85a&color=fff&size=46'">
+                <div class="cl-dir ${dirClass}" title="${dirLabel}">${dirIcon}</div>
+                <div style="flex:1;min-width:0;">
+                    <div class="cl-name" style="${isMissed?'color:var(--danger);':''}">${c.peerName||c.peerEmail||'مجهول'}</div>
+                    <div class="cl-meta">${timeStr}${durStr?' · '+durStr:''}</div>
+                </div>
+                <span class="cl-type ${typeClass}">${typeLabel}</span>
+                ${durStr?`<span class="cl-dur">${durStr}</span>`:''}
+            </div>`;
+        });
+        container.innerHTML = html;
+    } catch(e) {
+        container.innerHTML = '<div class="text-center py-4 text-muted" style="font-family:Cairo,sans-serif;">حدث خطأ في تحميل السجل.</div>';
+    }
+};
+window.clearCallLog = async () => {
+    const r = await Swal.fire({ title:'مسح سجل المكالمات؟', icon:'warning', showCancelButton:true, confirmButtonColor:'#d33', cancelButtonText:'إلغاء', confirmButtonText:'مسح' });
+    if (!r.isConfirmed) return;
+    try {
+        const snap = await getDocs(collection(db,"users",currentUserEmail,"callLog"));
+        const batchSize = 20;
+        const docs = snap.docs;
+        for (let i = 0; i < docs.length; i += batchSize) {
+            const batch = writeBatch(db);
+            docs.slice(i, i+batchSize).forEach(d => batch.delete(d.ref));
+            await batch.commit();
+        }
+        document.getElementById("callLogContainer").innerHTML = '<div class="text-center py-5 text-muted"><i class="fa-solid fa-phone-slash fa-3x mb-3 opacity-25"></i><p style="font-family:Cairo,sans-serif;">لا توجد مكالمات بعد.</p></div>';
+    } catch(e) {}
+};
+// Listen for missed calls count on startup (calls not in log yet)
+function _listenMissedCallsOnStart() {
+    // Just reset badge — actual missed are detected in real-time via showIncomingCall
+}
+
 // ======= TAB SWITCH =======
 function switchTabInternal(tabId) {
     document.querySelectorAll('.app-content').forEach(el=>el.classList.remove('active'));
@@ -4158,6 +4342,29 @@ window.switchTab = (tabId, el) => {
 setTimeout(checkInviteParam, 3000);
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- CALL LOG MODAL -->
+<div class="modal fade" id="callLogModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content" style="border-radius:20px;overflow:hidden;">
+      <div class="modal-header text-white" style="background:linear-gradient(135deg,var(--primary),var(--secondary));">
+        <h5 class="modal-title fw-bold" style="font-family:'Cairo',sans-serif;"><i class="fa-solid fa-phone-volume me-2"></i>سجل المكالمات</h5>
+        <div class="d-flex gap-2 align-items-center">
+          <button class="btn btn-sm btn-outline-light" onclick="clearCallLog()" style="border-radius:8px;font-family:'Cairo',sans-serif;font-size:12px;"><i class="fa-solid fa-trash-can me-1"></i>مسح الكل</button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+      </div>
+      <div class="modal-body p-0" style="max-height:500px;overflow-y:auto;">
+        <div id="callLogContainer">
+          <div class="text-center py-5 text-muted">
+            <i class="fa-solid fa-phone-slash fa-3x mb-3 opacity-25"></i>
+            <p style="font-family:'Cairo',sans-serif;">لا توجد مكالمات بعد.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="addMemberModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 rounded-4 shadow" dir="rtl">
