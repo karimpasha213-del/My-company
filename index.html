@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <style>
         :root {
             --primary: #0d4f1c; --primary-mid: #1b6e2e; --secondary: #38a85a;
@@ -227,6 +226,15 @@
         ::-webkit-scrollbar-thumb{background:#c1cdd8;border-radius:10px}
         ::-webkit-scrollbar-thumb:hover{background:var(--secondary)}
 
+
+        @keyframes callRingAnim {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+        @keyframes acceptPulse {
+            0%, 100% { box-shadow: 0 0 24px rgba(34,197,94,0.6); }
+            50% { box-shadow: 0 0 40px rgba(34,197,94,0.9), 0 0 60px rgba(34,197,94,0.4); }
+        }
         @media(max-width:768px){
             .navbar-collapse{background:rgba(0,0,0,0.25);padding:10px;border-radius:0 0 12px 12px}
             .navbar-search input{width:140px}
@@ -494,7 +502,6 @@
                                 <select id="regRole" class="form-select" required onchange="onRoleChange(this.value)">
                                     <option value="مهندس ري محوري" selected>مهندس ري محوري</option>
                                     <option value="مدير مشروع">مدير مشروع</option>
-                                    <option value="مهندس ري محوري">مهندس ري محوري</option>
                                     <option value="استشاري هندسي">استشاري هندسي</option>
                                     <option value="فني">فني</option>
                                     <option value="عامل">عامل</option>
@@ -677,15 +684,24 @@
                             </div>
                         </div>
                         <div class="ai-chat-box mb-3" id="aiChatBox"><div class="text-center py-5 text-muted"><i class="fa-solid fa-robot fa-3x mb-3 opacity-20"></i><p class="small">ابدأ سؤالك وسيتم إنشاء محادثة تلقائياً</p></div></div>
+                        <div id="aiFilePreview" class="mb-2" style="display:none;">
+                            <div class="d-flex align-items-center gap-2 p-2 rounded-3" style="background:#e8f5e9;border:1.5px dashed var(--secondary);">
+                                <i class="fa-solid fa-file-code fa-lg" style="color:var(--primary);"></i>
+                                <div class="flex-grow-1">
+                                    <span id="aiFileName" class="small fw-bold d-block" style="color:var(--primary-mid);"></span>
+                                    <span id="aiFileInfo" class="small text-muted"></span>
+                                </div>
+                                <button class="btn btn-sm btn-success fw-bold" id="aiExportExcelBtn" onclick="exportDXFExcel()" style="border-radius:6px;display:none;font-family:'Cairo',sans-serif;font-size:12px;padding:3px 10px;"><i class="fa-solid fa-file-excel me-1"></i>تصدير Excel</button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="clearAttachedFile()" style="border-radius:6px;padding:2px 10px;" title="إزالة الملف"><i class="fa-solid fa-times"></i></button>
+                            </div>
+                        </div>
                         <div class="input-group" style="border-radius:12px;overflow:hidden;">
-                            <input type="file" id="aiFileInput" accept=".dxf" style="display:none;" onchange="handleDXFUpload(event)">
-                            <button class="btn btn-outline-secondary" onclick="document.getElementById('aiFileInput').click()" title="إرفاق ملف DXF" style="border-color:#dee2e6;background:#f8f9fa;transition:all 0.2s;">
+                            <label class="btn btn-outline-secondary m-0 d-flex align-items-center justify-content-center px-3" for="aiFileInput" title="إرفاق ملف DXF" style="border-top-right-radius:0;border-bottom-right-radius:0;cursor:pointer;border-color:#ced4da;">
                                 <i class="fa-solid fa-paperclip"></i>
-                            </button>
-                            <input type="text" id="aiInput" class="form-control" placeholder="اسأل جروك، أو ارفع ملف DXF لحصره هيدروليكياً..." onkeypress="if(event.key==='Enter') askGroqAI()">
-                            <button class="btn btn-warning fw-bold px-4" onclick="askGroqAI()" id="aiSendBtn" style="font-family:'Cairo',sans-serif;">
-                                <i class="fa-solid fa-paper-plane me-1"></i>إرسال
-                            </button>
+                                <input type="file" id="aiFileInput" accept=".dxf,.DXF" style="display:none;" onchange="handleAIFileUpload(this)">
+                            </label>
+                            <input type="text" id="aiInput" class="form-control" placeholder="اسأل جروك عن الملف المرفق أو عن حسابات الري..." onkeypress="if(event.key==='Enter') askGroqAI()">
+                            <button class="btn btn-warning fw-bold px-4" onclick="askGroqAI()" id="aiSendBtn" style="font-family:'Cairo',sans-serif;"><i class="fa-solid fa-paper-plane me-1"></i>إرسال</button>
                         </div>
                     </div>
                 </div>
@@ -941,7 +957,8 @@ async function fileToBase64(file, maxSize=900, quality=0.78) {
 }
 
 // ======= GROQ API KEY =======
-let GROQ_API_KEY = "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";
+let GROQ_API_KEY = "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";
+let attachedDXFContent = null;
 
 // ======= STATE =======
 let currentUserEmail = "", currentUserName = "", currentUserRole = "";
@@ -972,6 +989,20 @@ function restoreTab() {
 // ======= AUTH =======
 onAuthStateChanged(auth, async (user) => {
     document.getElementById("splashScreen").style.display = "none";
+    // Pre-load AgriLink Pro logo for Excel export (do once at startup while online)
+    if(!window._agrilinkLogoB64){
+        (async()=>{
+            try{
+                const r=await fetch('https://raw.githubusercontent.com/karimamr123/ph1/main/ph1.png');
+                if(r.ok){
+                    const arr=new Uint8Array(await r.arrayBuffer());
+                    let b='';
+                    for(let i=0;i<arr.length;i+=1024) b+=String.fromCharCode(...arr.subarray(i,i+1024));
+                    window._agrilinkLogoB64=btoa(b);
+                }
+            }catch(e){}
+        })();
+    }
     if (user) {
         currentUserEmail = user.email.toLowerCase().trim();
         try {
@@ -2321,475 +2352,857 @@ function listenToAIChatMessages(roomId) {
         snap.forEach(d => {
             const m = d.data();
             if (m.sender==="user") {
-                const displayText = m.text.length > 300 ? m.text.substring(0,300)+'...<span class="text-muted small"> [ملف DXF محلل]</span>' : m.text;
-                chatBox.innerHTML += `<div class="text-end my-2"><span class="d-block small text-muted mb-1">أنت</span><p class="msg-out text-white p-2 px-3 rounded-4 d-inline-block mb-0" style="max-width:85%;font-size:14px;">${displayText}</p></div>`;
+                chatBox.innerHTML += `<div class="text-end my-2"><span class="d-block small text-muted mb-1">أنت</span><p class="msg-out text-white p-2 px-3 rounded-4 d-inline-block mb-0" style="max-width:85%;font-size:14px;">${m.text}</p></div>`;
             } else {
-                chatBox.innerHTML += renderAIMessage(m.text, d.id);
+                chatBox.innerHTML += `<div class="text-start my-2"><span class="d-block small text-muted mb-1"><i class="fa-solid fa-robot me-1" style="color:var(--gold);"></i>جروك AI</span><p class="msg-in p-2 px-3 rounded-4 d-inline-block mb-0" style="max-width:90%;font-size:14px;line-height:1.8;">${m.text}</p></div>`;
             }
         });
         chatBox.scrollTop = chatBox.scrollHeight;
     });
 }
-
-function renderAIMessage(rawText, msgId) {
-    const takeoffMatch = rawText.match(/\[TAKEOFF_JSON\]([\s\S]*?)\[\/TAKEOFF_JSON\]/);
-    let displayText = rawText;
-    let downloadBtn = '';
-    if (takeoffMatch) {
-        displayText = rawText.replace(/\[TAKEOFF_JSON\][\s\S]*?\[\/TAKEOFF_JSON\]/g, '').trim();
-        const safeJson = takeoffMatch[1].trim().replace(/<br>/g,'').replace(/&quot;/g,'"');
-        downloadBtn = `<div class="mt-2 pt-2" style="border-top:1px solid var(--border);">
-            <button onclick="triggerTakeoffDownload('data_${msgId}')" class="btn btn-success btn-sm fw-bold px-3 py-2" style="border-radius:10px;font-family:Cairo,sans-serif;font-size:13px;background:linear-gradient(135deg,#1b6e2e,#38a85a);border:none;box-shadow:0 3px 10px rgba(27,110,46,0.3);">
-                <i class="fa-solid fa-file-csv me-2"></i>تحميل جدول الكميات — Excel/CSV
-            </button>
-        </div>
-        <script id="data_${msgId}" type="application/json">${safeJson.replace(/</g,'&lt;').replace(/>/g,'&gt;')}<\/script>`;
+// ======= DXF FILE HANDLING =======
+window.handleAIFileUpload = function(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext !== 'dxf') {
+        Swal.fire({ icon:'error', title:'صيغة غير مدعومة', text:'يُدعم حالياً ملفات DXF فقط (.dxf)', confirmButtonColor:'#1b5e20' });
+        input.value=''; return;
     }
-    displayText = displayText.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
-    return `<div class="text-start my-2"><span class="d-block small text-muted mb-1"><i class="fa-solid fa-robot me-1" style="color:var(--gold);"></i>جروك AI</span><div class="msg-in p-3 rounded-4 d-inline-block mb-0" style="max-width:92%;font-size:14px;line-height:1.9;">${displayText}${downloadBtn}</div></div>`;
+    if (file.size > 20*1024*1024) {
+        Swal.fire({
+            icon:'warning', title:'الملف كبير جداً',
+            text:`حجم الملف ${(file.size/1024/1024).toFixed(1)} ميغابايت. هل تريد المتابعة؟`,
+            showCancelButton:true, confirmButtonColor:'#1b5e20',
+            cancelButtonText:'إلغاء', confirmButtonText:'متابعة'
+        }).then(res=>{ if(res.isConfirmed) doReadFile(file,input); else input.value=''; });
+        return;
+    }
+    doReadFile(file, input);
+};
+function doReadFile(file, input) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const text = e.target.result;
+            if (!text.includes('SECTION') || !text.includes('ENDSEC')) {
+                Swal.fire({ icon:'warning', title:'الملف لا يبدو DXF صحيحاً', text:'تأكد من أن الملف ملف AutoCAD DXF حقيقي.', confirmButtonColor:'#1b5e20' });
+                input.value=''; return;
+            }
+            if (text.trim().length < 20) {
+                Swal.fire({ icon:'warning', title:'الملف فارغ', confirmButtonColor:'#1b5e20' });
+                input.value=''; return;
+            }
+            const parsed = parseDXF(text);
+            window._lastParsedDXF = parsed;
+            window._lastDXFFileName = file.name;
+            attachedDXFContent = buildDXFSummary(parsed, file.name);
+            document.getElementById("aiFilePreview").style.display = "block";
+            document.getElementById("aiFileName").textContent = file.name;
+            document.getElementById("aiFileInfo").textContent =
+                `${parsed.layers.length} طبقة | ${parsed.entityCount} عنصر | ${(file.size/1024).toFixed(1)} كيلوبايت`;
+            document.getElementById("aiInput").placeholder = "اسأل عن الملف أو اتركه فارغاً للملخص التلقائي...";
+            const exBtn = document.getElementById("aiExportExcelBtn");
+            if (exBtn) exBtn.style.display = "inline-block";
+        } catch(err) {
+            Swal.fire({ icon:'error', title:'خطأ في قراءة الملف', text:err.message, confirmButtonColor:'#1b5e20' });
+        }
+    };
+    reader.onerror = ()=>Swal.fire({ icon:'error', title:'تعذّر قراءة الملف', confirmButtonColor:'#1b5e20' });
+    reader.readAsText(file,'utf-8');
 }
 
-window.triggerTakeoffDownload = function(dataId) {
-    const el = document.getElementById(dataId);
-    if (!el) { Swal.fire({icon:'error',title:'خطأ',text:'لا توجد بيانات للتحميل',confirmButtonColor:'#1b6e2e'}); return; }
-    let items;
-    try {
-        const raw = el.textContent.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
-        items = JSON.parse(raw);
-    } catch(e) { Swal.fire({icon:'error',title:'خطأ في البيانات',text:'تعذّر تحليل جدول الكميات: '+e.message,confirmButtonColor:'#1b6e2e'}); return; }
-    downloadExcelFromTable(items);
+window.clearAttachedFile = function() {
+    attachedDXFContent = null;
+    window._lastParsedDXF = null;
+    window._lastDXFFileName = null;
+    document.getElementById("aiFilePreview").style.display = "none";
+    document.getElementById("aiFileInput").value = "";
+    document.getElementById("aiInput").placeholder = "اسأل جروك عن الملف المرفق أو عن حسابات الري...";
+    const exBtn = document.getElementById("aiExportExcelBtn");
+    if (exBtn) exBtn.style.display = "none";
 };
 
-function generateTakeoffCSV(items, fileName) {
-    downloadExcelFromTable(items, fileName);
+function parseDXF(text) {
+    // Entity types to ignore completely when counting / measuring
+    const IGNORE_TYPES=new Set(['TEXT','MTEXT','DIMENSION','HATCH','LEADER','XLINE','RAY',
+        'VIEWPORT','IMAGE','SOLID','POINT','WIPEOUT','ATTDEF','SPLINE']);
+    // Sub-entities that belong to a parent (POLYLINE→VERTEX, INSERT→ATTRIB/SEQEND)
+    const SUB_TYPES=new Set(['VERTEX','SEQEND','ATTRIB']);
+
+    const rawLines=text.replace(/\r/g,'').split('\n');
+    const groups=[];
+    for(let i=0;i+1<rawLines.length;i+=2){
+        const code=parseInt(rawLines[i].trim(),10);
+        const value=rawLines[i+1]?rawLines[i+1].trim():'';
+        if(!isNaN(code)) groups.push([code,value]);
+    }
+
+    const result={
+        layers:[],layerData:{},blockDefs:{},entityTypes:{},entityCount:0,
+        blocks:[],textItems:[],version:'',insunits:0,
+        extents:{minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity}
+    };
+
+    // ── helpers ──────────────────────────────────────────────────────────────
+    const ensureLD=name=>{
+        if(!result.layerData[name])
+            result.layerData[name]={insertBlocks:{},lineLength:0,entityCounts:{},
+                                    xdataLengths:[],attribLengths:[]};
+        return result.layerData[name];
+    };
+    const ensureBD=name=>{
+        if(!result.blockDefs[name]) result.blockDefs[name]={lineLength:0,circleCount:0};
+        return result.blockDefs[name];
+    };
+    // Bulge-corrected arc-segment length
+    const bLen=(x1,y1,x2,y2,b)=>{
+        const d=Math.sqrt((x2-x1)**2+(y2-y1)**2);
+        if(!d||Math.abs(b)<1e-10) return d;
+        const th=4*Math.atan(Math.abs(b));
+        const r=d/(2*Math.sin(th/2));
+        return Math.abs(r*th);
+    };
+    // Build a fresh entity object
+    const newEnt=(type)=>({type,layer:'0',text:'',
+        x1:0,y1:0,z1:0,x2:0,y2:0,z2:0,
+        blockName:'',vertices:[],closed:false,
+        radius:0,startAngle:0,endAngle:360,
+        _px:undefined,attrTag:'',attrValue:'',
+        scaleX:0,scaleY:0,scaleZ:0});
+    // Apply DXF group codes to an entity object
+    const applyCode=(ent,code,val)=>{
+        if(code===8)  ent.layer=val;
+        if(code===1)  ent.text=val;
+        if(code===3)  ent.text+=val;
+        if(code===40) ent.radius=parseFloat(val);
+        if(code===50) ent.startAngle=parseFloat(val);
+        if(code===51) ent.endAngle=parseFloat(val);
+        if(code===10) ent.x1=parseFloat(val);
+        if(code===20) ent.y1=parseFloat(val);
+        if(code===30) ent.z1=parseFloat(val);
+        if(code===11) ent.x2=parseFloat(val);
+        if(code===21) ent.y2=parseFloat(val);
+        if(code===31) ent.z2=parseFloat(val);
+        if(code===2&&ent.type==='INSERT') ent.blockName=val;
+        if(ent.type==='INSERT'){
+            if(code===41) ent.scaleX=parseFloat(val);
+            if(code===42) ent.scaleY=parseFloat(val);
+            if(code===43) ent.scaleZ=parseFloat(val);
+        }
+        if(ent.type==='ATTRIB'){
+            if(code===2) ent.attrTag=val;
+            if(code===1) ent.attrValue=val;
+        }
+        if(ent.type==='LWPOLYLINE'){
+            if(code===10) ent._px=parseFloat(val);
+            if(code===20&&ent._px!==undefined){
+                ent.vertices.push({x:ent._px,y:parseFloat(val),bulge:0});
+                ent._px=undefined;
+            }
+            if(code===42&&ent.vertices.length>0)
+                ent.vertices[ent.vertices.length-1].bulge=parseFloat(val);
+            if(code===70) ent.closed=!!(parseInt(val)&1);
+        }
+        if(ent.type==='POLYLINE'&&code===70) ent.closed=!!(parseInt(val)&1);
+    };
+
+    // Accumulate geometry from an entity into an accumulator {lineLength, circleCount}
+    const addGeometry=(ent,acc)=>{
+        const t=ent.type;
+        if(t==='LINE'){
+            const dx=ent.x2-ent.x1,dy=ent.y2-ent.y1,dz=(ent.z2||0)-(ent.z1||0);
+            acc.lineLength+=Math.sqrt(dx*dx+dy*dy+dz*dz);
+        }
+        if(t==='LWPOLYLINE'&&ent.vertices&&ent.vertices.length>=1){
+            const v=ent.vertices;
+            const isCirc=ent.closed&&v.length>=2&&v.every(vx=>Math.abs(Math.abs(vx.bulge||0)-1)<0.05);
+            if(isCirc){ acc.circleCount++; }
+            else if(v.length>1){
+                for(let i=0;i<v.length-1;i++)
+                    acc.lineLength+=bLen(v[i].x,v[i].y,v[i+1].x,v[i+1].y,v[i].bulge||0);
+                if(ent.closed)
+                    acc.lineLength+=bLen(v[v.length-1].x,v[v.length-1].y,v[0].x,v[0].y,v[v.length-1].bulge||0);
+            }
+        }
+        if(t==='POLYLINE'&&ent.vertices&&ent.vertices.length>1){
+            const v=ent.vertices;
+            for(let i=0;i<v.length-1;i++)
+                acc.lineLength+=Math.sqrt((v[i+1].x-v[i].x)**2+(v[i+1].y-v[i].y)**2+((v[i+1].z||0)-(v[i].z||0))**2);
+            if(ent.closed){
+                const f=v[0],ls=v[v.length-1];
+                acc.lineLength+=Math.sqrt((f.x-ls.x)**2+(f.y-ls.y)**2+((f.z||0)-(ls.z||0))**2);
+            }
+        }
+        if(t==='ARC'&&ent.radius>0){
+            let da=ent.endAngle-ent.startAngle; if(da<=0) da+=360;
+            acc.lineLength+=ent.radius*da*Math.PI/180;
+        }
+        if(t==='CIRCLE') acc.circleCount++;
+    };
+
+    // ── state ─────────────────────────────────────────────────────────────────
+    let currentSection='',currentTable='';
+    // BLOCKS section state
+    let currentBlock=null,inBlock=false,blkEnt=null,blkPoly=null;
+    // ENTITIES section state
+    let currentEntity=null,currentPolyline=null;
+    let inXdata=false,xdataDistances=[];
+
+    // Finalize a block-section entity into its blockDef accumulator
+    const finalizeBlkEnt=()=>{
+        if(!blkEnt||!currentBlock||!currentBlock.name) return;
+        const t=blkEnt.type;
+        // VERTEX: accumulate coords into parent POLYLINE (geometry added at SEQEND)
+        if(t==='VERTEX'&&blkPoly){ blkPoly.vertices.push({x:blkEnt.x1,y:blkEnt.y1,z:blkEnt.z1}); return; }
+        // SEQEND: now the parent POLYLINE has all its vertices — calculate geometry
+        if(t==='SEQEND'){
+            if(blkPoly&&!currentBlock.name.startsWith('*')){
+                const bd=ensureBD(currentBlock.name);
+                addGeometry(blkPoly,bd);
+            }
+            blkPoly=null; return;
+        }
+        if(IGNORE_TYPES.has(t)||SUB_TYPES.has(t)) return;
+        // POLYLINE geometry is deferred to SEQEND (after VERTEXes are accumulated)
+        if(t==='POLYLINE') return;
+        if(!currentBlock.name.startsWith('*')){
+            const bd=ensureBD(currentBlock.name);
+            addGeometry(blkEnt,bd);
+            currentBlock.entities++;
+        }
+    };
+
+    // ── main loop ─────────────────────────────────────────────────────────────
+    for(let i=0;i<groups.length;i++){
+        const [code,value]=groups[i];
+        if(code===0&&value==='SECTION'){currentSection=groups[i+1]?.[1]||'';i++;continue;}
+        if(code===0&&value==='ENDSEC'){
+            // Before leaving BLOCKS: finalize any in-progress block entity
+            if(currentSection==='BLOCKS'){ finalizeBlkEnt(); blkEnt=null; }
+            // Before leaving ENTITIES: finalize the last entity (normally triggered by
+            // the next code=0, but ENDSEC is intercepted here before ENTITIES handler)
+            // We signal finalization by falling through with a synthetic ENDSEC entity.
+            // Simplest approach: set a flag so ENTITIES handler fires once more.
+            if(currentSection==='ENTITIES'&&currentEntity){
+                // Temporarily set section so ENTITIES handler runs
+                // Instead, inline a minimal finalization just for INSERT/geometry:
+                const _t=currentEntity.type, _layer=currentEntity.layer||'0';
+                const _ld=ensureLD(_layer);
+                if(!IGNORE_TYPES.has(_t)&&!SUB_TYPES.has(_t)){
+                    result.entityTypes[_t]=(result.entityTypes[_t]||0)+1;
+                    result.entityCount++;
+                    _ld.entityCounts[_t]=(_ld.entityCounts[_t]||0)+1;
+                }
+                if(_t==='INSERT'&&currentEntity.blockName){
+                    _ld.insertBlocks[currentEntity.blockName]=(_ld.insertBlocks[currentEntity.blockName]||0)+1;
+                    // FIX(pipe-length + circle-count): Mirror the same fix as the main ENTITIES loop.
+                    // The old ENDSEC handler also had the isPipeCtx guard and was missing circle propagation.
+                    const _bd=result.blockDefs[currentEntity.blockName];
+                    if(_bd){
+                        if(_bd.lineLength>0){
+                            const _sx=currentEntity.scaleX===0?1.0:Math.abs(currentEntity.scaleX);
+                            const _sy=currentEntity.scaleY===0?1.0:Math.abs(currentEntity.scaleY);
+                            _ld.lineLength+=_bd.lineLength*Math.max(_sx,_sy);
+                        }
+                        if(_bd.circleCount>0){
+                            _ld.entityCounts['CIRCLE']=(_ld.entityCounts['CIRCLE']||0)+_bd.circleCount;
+                        }
+                    }
+                }
+                if(!IGNORE_TYPES.has(_t)&&!SUB_TYPES.has(_t)){
+                    if(_t==='LWPOLYLINE'&&currentEntity.vertices&&currentEntity.vertices.length>=2){
+                        const _v=currentEntity.vertices;
+                        const _isC=currentEntity.closed&&_v.every(vx=>Math.abs(Math.abs(vx.bulge||0)-1)<0.05);
+                        if(_isC){
+                            // FIX(code-review): Mirror the main ENTITIES path — also update
+                            // result.entityTypes so global summary totals stay consistent.
+                            _ld.entityCounts['LWPOLYLINE']=Math.max(0,(_ld.entityCounts['LWPOLYLINE']||1)-1);
+                            if(!_ld.entityCounts['LWPOLYLINE']) delete _ld.entityCounts['LWPOLYLINE'];
+                            _ld.entityCounts['CIRCLE']=(_ld.entityCounts['CIRCLE']||0)+1;
+                            result.entityTypes['LWPOLYLINE']=Math.max(0,(result.entityTypes['LWPOLYLINE']||1)-1);
+                            if(!result.entityTypes['LWPOLYLINE']) delete result.entityTypes['LWPOLYLINE'];
+                            result.entityTypes['CIRCLE']=(result.entityTypes['CIRCLE']||0)+1;
+                        }
+                        else addGeometry(currentEntity,_ld);
+                    } else { addGeometry(currentEntity,_ld); }
+                }
+                currentEntity=null;
+            }
+            currentSection='';currentTable='';continue;
+        }
+
+        // ── HEADER ─────────────────────────────────────────────────────────
+        if(currentSection==='HEADER'){
+            if(code===9&&value==='$ACADVER'&&groups[i+1]) result.version=groups[i+1][1];
+            if(code===9&&value==='$INSUNITS'&&groups[i+1]) result.insunits=parseInt(groups[i+1][1],10)||0;
+            if(code===9&&value==='$EXTMIN'){
+                if(groups[i+1]?.[0]===10) result.extents.minX=parseFloat(groups[i+1][1]);
+                if(groups[i+2]?.[0]===20) result.extents.minY=parseFloat(groups[i+2][1]);
+            }
+            if(code===9&&value==='$EXTMAX'){
+                if(groups[i+1]?.[0]===10) result.extents.maxX=parseFloat(groups[i+1][1]);
+                if(groups[i+2]?.[0]===20) result.extents.maxY=parseFloat(groups[i+2][1]);
+            }
+            continue;
+        }
+
+        // ── TABLES ─────────────────────────────────────────────────────────
+        if(currentSection==='TABLES'){
+            if(code===0&&value==='TABLE'&&groups[i+1]){currentTable=groups[i+1][1];i++;continue;}
+            if(code===0&&value==='ENDTAB'){currentTable='';continue;}
+            if(code===0&&value==='LAYER'&&currentTable==='LAYER'){
+                const layer={name:'',color:7,linetype:'Continuous',frozen:false,off:false,locked:false};
+                let j=i+1;
+                while(j<groups.length&&groups[j][0]!==0){
+                    const[c2,v2]=groups[j];
+                    if(c2===2) layer.name=v2;
+                    if(c2===62){const cv=parseInt(v2,10);if(cv<0){layer.off=true;layer.color=Math.abs(cv);}else layer.color=cv;}
+                    if(c2===6)  layer.linetype=v2||'Continuous';
+                    if(c2===70){const f=parseInt(v2,10);layer.frozen=!!(f&1);layer.locked=!!(f&4);}
+                    j++;
+                }
+                if(layer.name) result.layers.push(layer);
+            }
+            continue;
+        }
+
+        // ── BLOCKS ─────────────────────────────────────────────────────────
+        // Parse full geometry from block definitions so INSERT can expand them later
+        if(currentSection==='BLOCKS'){
+            if(code===0&&value==='BLOCK'){
+                finalizeBlkEnt(); blkEnt=null; blkPoly=null;
+                currentBlock={name:'',layer:'',entities:0}; inBlock=true; continue;
+            }
+            if(code===0&&value==='ENDBLK'){
+                finalizeBlkEnt(); blkEnt=null; blkPoly=null;
+                if(currentBlock&&!currentBlock.name.startsWith('*')) result.blocks.push(currentBlock);
+                currentBlock=null; inBlock=false; continue;
+            }
+            if(inBlock&&currentBlock){
+                if(code===2&&!currentBlock.name) currentBlock.name=value;
+                if(code===8&&!currentBlock.layer) currentBlock.layer=value;
+                if(code===0){
+                    finalizeBlkEnt();
+                    blkEnt=newEnt(value);
+                    if(value==='POLYLINE') blkPoly=blkEnt;
+                    // FIX(pipe-length): Do NOT set blkPoly=null here for SEQEND.
+                    // The old code cleared blkPoly immediately on SEQEND, so when
+                    // finalizeBlkEnt() ran at the *next* code=0, blkPoly was already
+                    // null and the POLYLINE's computed geometry was silently discarded.
+                    // blkPoly is correctly cleared inside finalizeBlkEnt() at t==='SEQEND'.
+                } else if(blkEnt){
+                    applyCode(blkEnt,code,value);
+                }
+            }
+            continue;
+        }
+
+        // ── ENTITIES ───────────────────────────────────────────────────────
+        if(currentSection==='ENTITIES'){
+            if(code===0){
+                // ── Finalize previous entity ──────────────────────────────
+                if(currentEntity){
+                    const t=currentEntity.type;
+                    const layer=currentEntity.layer||'0';
+                    const ld=ensureLD(layer);
+
+                    // Count top-level entities only (skip IGNORE + SUB types)
+                    if(!IGNORE_TYPES.has(t)&&!SUB_TYPES.has(t)){
+                        result.entityTypes[t]=(result.entityTypes[t]||0)+1;
+                        result.entityCount++;
+                        ld.entityCounts[t]=(ld.entityCounts[t]||0)+1;
+                    }
+
+                    // INSERT: record block usage + expand real geometry from blockDefs
+                    if(t==='INSERT'&&currentEntity.blockName){
+                        ld.insertBlocks[currentEntity.blockName]=
+                            (ld.insertBlocks[currentEntity.blockName]||0)+1;
+                        const bd=result.blockDefs[currentEntity.blockName];
+                        // FIX(pipe-length): Removed the isPipeCtx regex guard that previously
+                        // blocked lineLength accumulation for any layer/block whose name did not
+                        // contain "pipe|tube|pvc|…".  That guard was the primary reason pipes were
+                        // reporting 0 m (or only 0.25 m from small stub entities): the INSERT block
+                        // expansion was silently skipped when the naming convention didn't match.
+                        // lineLength is now accumulated for every INSERT regardless of name.
+                        // buildRowsData() already applies the isPipe filter before displaying
+                        // lengths, so non-pipe layers are unaffected in the final report.
+                        //
+                        // FIX(circle-count): Propagate circles that live inside block definitions.
+                        // A CIRCLE drawn inside a BLOCK definition is stored in bd.circleCount but
+                        // was never surfaced in ld.entityCounts, so INSERT-referenced sprinkler
+                        // circles were invisible to the per-layer counter.
+                        if(bd){
+                            if(bd.lineLength>0){
+                                // Geometric length: use real coordinate-based length from the block.
+                                // scaleX===0 means group-41 absent → AutoCAD default scale = 1.0
+                                const sx=currentEntity.scaleX===0?1.0:Math.abs(currentEntity.scaleX);
+                                const sy=currentEntity.scaleY===0?1.0:Math.abs(currentEntity.scaleY);
+                                ld.lineLength+=bd.lineLength*Math.max(sx,sy);
+                            }
+                            if(bd.circleCount>0){
+                                ld.entityCounts['CIRCLE']=(ld.entityCounts['CIRCLE']||0)+bd.circleCount;
+                            }
+                        }
+                    }
+
+                    // ATTRIB: extract tagged length values (fallback only)
+                    if(t==='ATTRIB'&&currentEntity.attrTag&&currentEntity.attrValue){
+                        const tag=(currentEntity.attrTag||'').toUpperCase();
+                        const val=parseFloat(currentEntity.attrValue);
+                        if(!isNaN(val)&&val>0&&/^(LEN|LENGTH|PIPE_L|DIST)/i.test(tag))
+                            ld.attribLengths.push(val);
+                    }
+
+                    // XDATA distances
+                    if(xdataDistances.length>0){
+                        xdataDistances.forEach(d=>{if(d>0) ld.xdataLengths.push(d);});
+                    }
+                    xdataDistances=[]; inXdata=false;
+
+                    // Geometry accumulation for direct entities
+                    if(!IGNORE_TYPES.has(t)&&!SUB_TYPES.has(t)){
+                        // For LWPOLYLINE: check if it's really a circle (bulge=1) and reclassify
+                        if(t==='LWPOLYLINE'&&currentEntity.vertices&&currentEntity.vertices.length>=2){
+                            const v=currentEntity.vertices;
+                            const isCirc=currentEntity.closed&&
+                                v.every(vx=>Math.abs(Math.abs(vx.bulge||0)-1)<0.05);
+                            if(isCirc){
+                                // Reclassify LWPOLYLINE → CIRCLE in all counters
+                                ld.entityCounts['LWPOLYLINE']=
+                                    Math.max(0,(ld.entityCounts['LWPOLYLINE']||1)-1);
+                                if(!ld.entityCounts['LWPOLYLINE']) delete ld.entityCounts['LWPOLYLINE'];
+                                ld.entityCounts['CIRCLE']=(ld.entityCounts['CIRCLE']||0)+1;
+                                result.entityTypes['LWPOLYLINE']=
+                                    Math.max(0,(result.entityTypes['LWPOLYLINE']||1)-1);
+                                if(!result.entityTypes['LWPOLYLINE']) delete result.entityTypes['LWPOLYLINE'];
+                                result.entityTypes['CIRCLE']=(result.entityTypes['CIRCLE']||0)+1;
+                                // Don't add to lineLength — it's a circle component, not a pipe
+                            } else {
+                                addGeometry(currentEntity,ld);
+                            }
+                        } else {
+                            addGeometry(currentEntity,ld);
+                        }
+                    }
+
+                    // Text items for summary
+                    if((t==='TEXT'||t==='MTEXT')&&currentEntity.text)
+                        result.textItems.push({text:currentEntity.text,layer});
+
+                    // VERTEX → accumulate to parent POLYLINE
+                    if(t==='VERTEX'&&currentPolyline)
+                        currentPolyline.vertices.push(
+                            {x:currentEntity.x1||0,y:currentEntity.y1||0,z:currentEntity.z1||0});
+                }
+
+                // ── Start new entity ──────────────────────────────────────
+                if(value==='SEQEND') currentPolyline=null;
+                currentEntity=(value!=='ENDSEC')?newEnt(value):null;
+                if(currentEntity&&currentEntity.type==='POLYLINE') currentPolyline=currentEntity;
+                continue;
+            }
+            if(currentEntity){
+                applyCode(currentEntity,code,value);
+                if(code===1001) inXdata=true;
+                if(inXdata&&(code===1040||code===1041)){
+                    const xv=parseFloat(value); if(!isNaN(xv)&&xv>0.001) xdataDistances.push(xv);
+                }
+            }
+        }
+    }
+    return result;
 }
 
-// ======= STYLED EXCEL EXPORT (ExcelJS) =======
-async function downloadExcelFromTable(items, projectName) {
-    if (!Array.isArray(items) || items.length === 0) {
-        Swal.fire({icon:'warning',title:'لا توجد بيانات',text:'لم يتم استخراج بيانات كميات.',confirmButtonColor:'#1b6e2e'}); return;
+function buildDXFSummary(parsed, fileName) {
+    const ACI={0:'بلون الكتلة',1:'أحمر',2:'أصفر',3:'أخضر',4:'سماوي',5:'أزرق',6:'ماجنتا',7:'أبيض/أسود',8:'رمادي داكن',9:'رمادي فاتح',250:'رمادي',251:'رمادي فاتح',252:'رمادي متوسط',253:'رمادي داكن',254:'أسود',255:'بلون الطبقة'};
+    const typeAR={LINE:'خط مستقيم',CIRCLE:'دائرة',ARC:'قوس',POLYLINE:'بولي لاين 3D',LWPOLYLINE:'بولي لاين خفيف',TEXT:'نص',MTEXT:'نص متعدد الأسطر',INSERT:'إدراج كتلة',HATCH:'تظليل',DIMENSION:'بُعد/كوتة',SPLINE:'سبلاين',ELLIPSE:'قطع ناقص',POINT:'نقطة',SOLID:'مصمت',LEADER:'خط قائد',ATTDEF:'تعريف خاصية',ATTRIB:'قيمة خاصية',VIEWPORT:'نافذة عرض',IMAGE:'صورة',XLINE:'خط لانهائي',RAY:'شعاع',WIPEOUT:'مسح خلفية','3DFACE':'وجه ثلاثي الأبعاد'};
+    const verMap={'AC1006':'R10','AC1009':'R11/R12','AC1012':'R13','AC1014':'R14','AC1015':'2000','AC1018':'2004','AC1021':'2007','AC1024':'2010','AC1027':'2013','AC1032':'2018'};
+    let s=`╔══════════════════════════════════════╗\n║     تحليل ملف AutoCAD DXF            ║\n╚══════════════════════════════════════╝\n`;
+    s+=`الملف: ${fileName}\n`;
+    if(parsed.version) s+=`إصدار AutoCAD: ${verMap[parsed.version]||parsed.version}\n`;
+    if(parsed.extents.maxX!==-Infinity){
+        const w=Math.abs(parsed.extents.maxX-parsed.extents.minX).toFixed(3);
+        const h=Math.abs(parsed.extents.maxY-parsed.extents.minY).toFixed(3);
+        s+=`نطاق الرسم: X(${(+parsed.extents.minX).toFixed(2)}→${(+parsed.extents.maxX).toFixed(2)}) Y(${(+parsed.extents.minY).toFixed(2)}→${(+parsed.extents.maxY).toFixed(2)})\n`;
+        s+=`الأبعاد التقريبية: عرض ${w} × ارتفاع ${h} وحدة\n`;
     }
-    if (typeof ExcelJS === 'undefined') {
-        Swal.fire({icon:'error',title:'مكتبة Excel غير محملة',text:'يرجى التحقق من الاتصال بالإنترنت وإعادة تحميل الصفحة.',confirmButtonColor:'#1b6e2e'}); return;
+    s+=`\n━━━ الطبقات (${parsed.layers.length} طبقة) ━━━\n`;
+    parsed.layers.forEach((l,i)=>{
+        const colorLabel=ACI[l.color]||`ACI-${l.color}`;
+        const status=l.frozen?'🔒مجمدة':l.locked?'🔐مقفولة':l.off?'👁مخفية':'✅نشطة';
+        s+=`  ${i+1}. "${l.name}" | اللون:${colorLabel}(${l.color}) | الخط:${l.linetype} | ${status}\n`;
+    });
+    s+=`\n━━━ العناصر: ${parsed.entityCount} عنصر ━━━\n`;
+    Object.entries(parsed.entityTypes).sort((a,b)=>b[1]-a[1]).forEach(([type,count])=>{
+        s+=`  ${typeAR[type]||type}: ${count}\n`;
+    });
+    if(parsed.blocks.length>0){
+        const ub=parsed.blocks.filter(b=>!b.name.startsWith('*'));
+        if(ub.length>0){ s+=`\n━━━ الكتل: ${ub.length} ━━━\n`; ub.forEach(b=>{ s+=`  - "${b.name}" (${b.entities} عنصر)\n`; }); }
     }
-
-    Swal.fire({title:'جاري إنشاء ملف Excel...',html:'<div style="font-family:Cairo,sans-serif;color:#1b6e2e;">جاري تنسيق الجدول الاحترافي...</div>',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
-
-    try {
-        const workbook = new ExcelJS.Workbook();
-        workbook.creator = 'AgriLink Pro';
-        workbook.created = new Date();
-        workbook.properties.date1904 = false;
-
-        const sheet = workbook.addWorksheet('حصر الكميات', {
-            views: [{ rightToLeft: true, showGridLines: false }]
+    if(parsed.textItems.length>0){
+        s+=`\n━━━ النصوص (${parsed.textItems.length}) ━━━\n`;
+        parsed.textItems.slice(0,30).forEach(t=>{
+            const c=t.text.replace(/\\P/g,' ').replace(/\\[a-zA-Z0-9.;:]+;/g,'').trim();
+            if(c) s+=`  [${t.layer}] "${c}"\n`;
         });
-
-        // ======= COLUMN DEFINITIONS (10 columns — 2 new hydraulic cols before ملاحظات) =======
-        // Columns: م | الطبقة | اسم المكون (عربي) | Component Name | الكمية | الوحدة | المواصفة/القطر | التصرف | الضغط | ملاحظات
-        const HEADERS = [
-            'م',
-            'الطبقة',
-            'اسم المكون (عربي)',
-            'Component Name',
-            'الكمية',
-            'الوحدة',
-            'المواصفة / القطر',
-            'التصرف',
-            'الضغط',
-            'ملاحظات'
-        ];
-        const COL_COUNT = HEADERS.length; // 10
-
-        // ---- Helper: calc col width from data array ----
-        function calcWidth(values, min, max) {
-            const longest = values.reduce((acc, v) => Math.max(acc, String(v == null ? '' : v).length), 0);
-            return Math.min(max, Math.max(min, Math.ceil(longest * 1.35)));
-        }
-
-        // Build data rows first so we can measure them for auto-fit widths
-        const LENGTH_UNITS = ['م.ط','م','متر طولي','متر','ml','m','lin m','linear m'];
-        function isLengthUnit(u) {
-            return LENGTH_UNITS.some(lu => String(u||'').trim().toLowerCase() === lu.toLowerCase());
-        }
-
-        const dataRows = items.map((item, idx) => {
-            const qty = item.qty !== undefined ? item.qty : (item.quantity !== undefined ? item.quantity : '');
-            const unit = item.unit || '';
-            // For pipeline layers with length units: unit cell shows "qty unit" combined
-            const combinedUnit = (qty !== '' && isLengthUnit(unit))
-                ? (String(qty) + ' ' + unit)
-                : unit;
-            return [
-                idx + 1,
-                item.layer || '',
-                item.component_ar || item.component || '',
-                item.component_en || '',
-                qty,
-                combinedUnit,
-                item.spec || item.diameter || item.size || '',
-                '',   // التصرف — empty for user to fill
-                '',   // الضغط — empty for user to fill
-                item.notes || ''
-            ];
-        });
-
-        // Compute auto-fit column widths from header + data
-        const colWidths = HEADERS.map((h, ci) => {
-            const allValues = [h, ...dataRows.map(r => r[ci])];
-            // Different min/max per semantic column
-            const mins  = [4,  14, 18, 16, 8,  12, 16, 12, 12, 18];
-            const maxes = [6,  28, 38, 32, 14, 22, 28, 18, 18, 38];
-            return calcWidth(allValues, mins[ci], maxes[ci]);
-        });
-
-        sheet.columns = HEADERS.map((_, ci) => ({ width: colWidths[ci] }));
-
-        // ---- Style helpers ----
-        const CENTER_MID = { horizontal: 'center', vertical: 'middle', wrapText: true };
-        const RIGHT_MID  = { horizontal: 'right',  vertical: 'middle', wrapText: true };
-
-        function solidFill(argb) { return { type: 'pattern', pattern: 'solid', fgColor: { argb } }; }
-        function border(style, argb) {
-            const b = { style, color: { argb } };
-            return { top: b, left: b, bottom: b, right: b };
-        }
-        function cairoFont(size, bold, colorArgb) {
-            return { name: 'Cairo', size, bold: !!bold, color: { argb: colorArgb || 'FF1A2332' } };
-        }
-        function styleCell(cell, bgArgb, font, align, bdr) {
-            if (bgArgb) cell.fill = solidFill(bgArgb);
-            if (font)   cell.font = font;
-            if (align)  cell.alignment = align;
-            if (bdr)    cell.border = bdr;
-        }
-
-        // ---- Auto row height: measure longest cell in row ----
-        function autoRowHeight(values, baseH, perCharH, maxH) {
-            const longest = values.reduce((acc, v) => Math.max(acc, String(v == null ? '' : v).length), 0);
-            return Math.min(maxH, baseH + Math.floor(longest / 30) * perCharH);
-        }
-
-        // ======= ROWS 1–4: Logo banner =======
-        for (let r = 1; r <= 4; r++) sheet.getRow(r).height = 19;
-        sheet.mergeCells(1, 1, 4, COL_COUNT);
-        const logoCell = sheet.getCell('A1');
-
-        const logoCandidates = ['ph1.png', 'ph1.jpg', 'image_1780072731868.png'];
-        let logoLoaded = false;
-        for (const src of logoCandidates) {
-            try {
-                const resp = await fetch(src);
-                if (!resp.ok) continue;
-                const buf = await resp.arrayBuffer();
-                const ext = src.endsWith('.jpg') ? 'jpeg' : 'png';
-                const imgId = workbook.addImage({ buffer: buf, extension: ext });
-                sheet.addImage(imgId, { tl: { col: 3, row: 0 }, br: { col: 6, row: 4 }, editAs: 'oneCell' });
-                logoCell.value = '';
-                logoLoaded = true;
-                break;
-            } catch(e) { /* try next */ }
-        }
-        if (!logoLoaded) {
-            styleCell(logoCell, 'FFE8F8EE', cairoFont(26, true, 'FF0D4F1C'), CENTER_MID, null);
-            logoCell.value = 'AgriLink Pro';
-        }
-
-        // ======= ROW 5: Platform name =======
-        sheet.getRow(5).height = 30;
-        sheet.mergeCells(5, 1, 5, COL_COUNT);
-        const platCell = sheet.getCell(5, 1);
-        platCell.value = 'منصة AgriLink Pro — الهندسة الزراعية المتكاملة';
-        styleCell(platCell, 'FFE8F8EE', cairoFont(14, true, 'FF0D4F1C'), CENTER_MID, null);
-
-        // ======= ROW 6: Report title =======
-        sheet.getRow(6).height = 28;
-        sheet.mergeCells(6, 1, 6, COL_COUNT);
-        const repCell = sheet.getCell(6, 1);
-        repCell.value = 'جدول الكميات — حصر شامل لنظام الري واللاندسكيب';
-        styleCell(repCell, 'FF0D4F1C', cairoFont(13, true, 'FFFFFFFF'), CENTER_MID, null);
-
-        // ======= ROW 7: Date + Project =======
-        sheet.getRow(7).height = 22;
-        const today = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
-        const half = Math.floor(COL_COUNT / 2);
-        sheet.mergeCells(7, 1, 7, half);
-        const dateCell = sheet.getCell(7, 1);
-        dateCell.value = 'التاريخ: ' + today;
-        styleCell(dateCell, 'FFF0FAF4', cairoFont(11, false, 'FF1B6E2E'), RIGHT_MID, null);
-
-        sheet.mergeCells(7, half + 1, 7, COL_COUNT);
-        const projCell = sheet.getCell(7, half + 1);
-        projCell.value = 'المشروع: ' + (projectName || (typeof window !== 'undefined' && window._pendingDXFFileName) || 'حصر كميات DXF');
-        styleCell(projCell, 'FFF0FAF4', cairoFont(11, false, 'FF1B6E2E'), RIGHT_MID, null);
-
-        // ======= ROW 8: Engineer + Item count =======
-        sheet.getRow(8).height = 20;
-        sheet.mergeCells(8, 1, 8, half);
-        const engCell = sheet.getCell(8, 1);
-        engCell.value = 'المهندس: ' + (typeof currentUserName !== 'undefined' ? currentUserName : '');
-        styleCell(engCell, 'FFF0FAF4', cairoFont(10, false, 'FF6B7A8D'), RIGHT_MID, null);
-
-        sheet.mergeCells(8, half + 1, 8, COL_COUNT);
-        const cntCell = sheet.getCell(8, half + 1);
-        cntCell.value = 'عدد البنود: ' + items.length + ' بند';
-        styleCell(cntCell, 'FFF0FAF4', cairoFont(10, false, 'FF6B7A8D'), RIGHT_MID, null);
-
-        // ======= ROW 9: Dark green divider =======
-        sheet.getRow(9).height = 5;
-        sheet.mergeCells(9, 1, 9, COL_COUNT);
-        sheet.getCell(9, 1).fill = solidFill('FF0D4F1C');
-
-        // ======= ROW 10: Column headers =======
-        const hdrRow = sheet.getRow(10);
-        hdrRow.height = 28;
-        HEADERS.forEach((h, ci) => {
-            const cell = hdrRow.getCell(ci + 1);
-            cell.value = h;
-            styleCell(cell, 'FF1B6E2E', cairoFont(12, true, 'FFFFFFFF'), CENTER_MID, border('medium', 'FF0D4F1C'));
-        });
-
-        // ======= DATA ROWS (row 11+) =======
-        dataRows.forEach((rowVals, idx) => {
-            const dr = sheet.addRow(rowVals);
-            // Auto row height based on longest value in row
-            dr.height = autoRowHeight(rowVals, 20, 8, 60);
-            const bgArgb = idx % 2 === 0 ? 'FFFFFFFF' : 'FFF3FBF5';
-            dr.eachCell({ includeEmpty: true }, (cell, cn) => {
-                styleCell(
-                    cell,
-                    bgArgb,
-                    cairoFont(11, cn === 5, 'FF1A2332'),  // bold qty col
-                    CENTER_MID,                             // ALL cells: center + middle
-                    border('thin', 'FFBCD8C5')
-                );
-            });
-        });
-
-        // ======= TOTAL ROW =======
-        const totVals = ['', 'الإجمالي', '', '', items.length + ' بند', '', '', '', '', ''];
-        const totRow = sheet.addRow(totVals);
-        totRow.height = 24;
-        totRow.eachCell({ includeEmpty: true }, cell => {
-            styleCell(cell, 'FF0D4F1C', cairoFont(12, true, 'FFFFFFFF'), CENTER_MID, border('medium', 'FF0A3D14'));
-        });
-
-        // ======= FOOTER =======
-        const fRowNum = sheet.lastRow.number + 2;
-        sheet.mergeCells(fRowNum, 1, fRowNum, COL_COUNT);
-        sheet.getRow(fRowNum).height = 18;
-        const fCell = sheet.getCell(fRowNum, 1);
-        fCell.value = 'تم إنشاء هذا التقرير بواسطة منصة AgriLink Pro — جميع الحقوق محفوظة © ' + new Date().getFullYear();
-        styleCell(fCell, null, cairoFont(9, false, 'FF6B7A8D'), CENTER_MID, null);
-        fCell.font = Object.assign(fCell.font || {}, { italic: true });
-
-        // ======= GENERATE & DOWNLOAD =======
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'حصر_كميات_ري_' + new Date().toISOString().slice(0, 10) + '.xlsx';
-        document.body.appendChild(a); a.click();
-        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1200);
-
-        Swal.close();
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'تم تحميل Excel بنجاح!', html: '<span style="font-family:Cairo,sans-serif;">' + items.length + ' بند • تنسيق احترافي</span>', showConfirmButton: false, timer: 3500 });
-
-    } catch(err) {
-        Swal.close();
-        Swal.fire({ icon: 'error', title: 'خطأ في إنشاء Excel', text: err.message, confirmButtonColor: '#1b6e2e' });
-        console.error('ExcelJS error:', err);
+        if(parsed.textItems.length>30) s+=`  ... و${parsed.textItems.length-30} نص إضافي\n`;
     }
+    s+=`\n══════════════════════════════════════\n`;
+    return s;
 }
 
-// ======= DXF SMART PARSER — FULL FILE, NO TRUNCATION =======
-function parseDXFToLayerSummary(content) {
-    // Split on the entire content string — never use substring() truncation
-    const lines = content.split(/\r?\n/);
-    const n = lines.length;
-    let i = 0;
-    const layerData = {};
-
-    function ensureLayer(name) {
-        if (!layerData[name]) layerData[name] = {
-            LINE:0, LWPOLYLINE:0, POLYLINE:0, INSERT:{}, ARC:0, CIRCLE:0,
-            TEXT:0, MTEXT:0, DIMENSION:0, HATCH:0, SPLINE:0, ELLIPSE:0,
-            lineLength:0   // exact Σ √((X2-X1)²+(Y2-Y1)²) for every LINE entity
-        };
+// ======= EXCEL EXPORT (جدول الكميات) =======
+function translateLayerToArabic(layerName) {
+    const ln=(layerName||'').toLowerCase();
+    const mm=layerName.match(/(\d+)\s*mm/i);
+    const diam=mm?mm[1]+'مم':'';
+    if(/pipe|tube/.test(ln)){
+        const base=/hdpe/.test(ln)?'ماسورة HDPE':/upvc/.test(ln)?'ماسورة UPVC':/pvc/.test(ln)?'ماسورة PVC':'ماسورة';
+        if(/main|رئيسي/.test(ln))   return `${base} رئيسية${diam?' قطر '+diam:''}`;
+        if(/lateral|جانبي/.test(ln)) return `${base} جانبية${diam?' قطر '+diam:''}`;
+        if(/sub|فرعي/.test(ln))      return `${base} فرعية${diam?' قطر '+diam:''}`;
+        if(/dist|توزيع/.test(ln))    return `${base} توزيع${diam?' قطر '+diam:''}`;
+        return `${base}${diam?' قطر '+diam:''}`;
     }
+    if(/valve|صمام/.test(ln)){
+        if(/isolation|iso/.test(ln))    return 'صمامات عزل';
+        if(/ball|كرة/.test(ln))         return 'صمامات كروية';
+        if(/air|هواء/.test(ln))         return 'صمامات هواء';
+        if(/pressure|regul|ضغط/.test(ln)) return 'صمامات تنظيم ضغط';
+        if(/solenoid|كهرب/.test(ln))    return 'صمامات كهربائية';
+        if(/butterfly/.test(ln))        return 'صمامات فراشة';
+        return 'صمامات';
+    }
+    if(/sprinkler|nozzle|رشاش|riser/.test(ln)) return 'رشاشات';
+    if(/dripper|drip|emitter|نقاط/.test(ln))   return 'نقاطات (دريبر)';
+    if(/van/.test(ln))                          return 'رشاشات VAN';
+    if(/rotor/.test(ln))                        return 'رشاشات دوارة';
+    if(/head/.test(ln))                         return 'رؤوس رشاشات';
+    if(/filter|فلتر/.test(ln))    return 'فلاتر';
+    if(/pump|مضخة/.test(ln))      return 'مضخات';
+    if(/tank|خزان/.test(ln))      return 'خزانات';
+    if(/meter|عداد/.test(ln))     return 'عدادات مياه';
+    if(/controller|تحكم/.test(ln)) return 'وحدات تحكم';
+    if(/tree|شجرة/.test(ln))      return 'أشجار';
+    if(/shrub|شجيرة/.test(ln))    return 'شجيرات';
+    if(/palm|نخل/.test(ln))       return 'نخيل';
+    if(/grass|lawn|عشب/.test(ln)) return 'مسطحات خضراء';
+    if(/flower|plant/.test(ln))   return 'نباتات';
+    if(/path|ممر/.test(ln))       return 'ممرات';
+    if(/light|إضاءة/.test(ln))    return 'إضاءة';
+    if(/fountain|نافورة/.test(ln)) return 'نوافير';
+    if(/^0$/.test(layerName))     return 'طبقة افتراضية';
+    if(/defpoints/i.test(ln))     return 'نقاط الأبعاد';
+    if(/text|نص/.test(ln))        return 'نصوص';
+    if(/dim|dimension|بعد/.test(ln)) return 'أبعاد (كوتات)';
+    if(/hatch|تظليل/.test(ln))    return 'تظليل';
+    if(/border|إطار/.test(ln))    return 'إطار الرسم';
+    if(/arc|قوس/.test(ln))        return 'أقواس ودوائر';
+    if(/circle|دائرة/.test(ln))   return 'دوائر';
+    if(/line/.test(ln))           return 'خطوط';
+    return layerName;
+}
 
-    // Advance index to the ENTITIES section by scanning code/value pairs
-    let inEntities = false;
-    for (; i < n - 3; i += 2) {
-        const code = parseInt((lines[i]||'').trim());
-        const val  = (lines[i+1]||'').trim();
-        if (code === 0 && val === 'SECTION') {
-            const code2 = parseInt((lines[i+2]||'').trim());
-            const val2  = (lines[i+3]||'').trim();
-            if (code2 === 2 && val2 === 'ENTITIES') { i += 4; inEntities = true; break; }
+function inferComponentName(layerName, topBlock) {
+    if (topBlock) return topBlock;
+    const ln=(layerName||'').toLowerCase();
+    const mm=layerName.match(/(\d+)\s*mm/i);
+    const diam=mm?mm[1]:null;
+    if(/pipe|tube/.test(ln)){
+        if(/pvc/.test(ln))  return diam?`PVC Pipe ${diam}mm`:'PVC Pipe';
+        if(/hdpe/.test(ln)) return diam?`HDPE Pipe ${diam}mm`:'HDPE Pipe';
+        return diam?`Pipe ${diam}mm`:'Pipe';
+    }
+    if(/isolation.*valve|valve.*isolation/.test(ln)) return 'Isolation Valve';
+    if(/valve/.test(ln))    return 'Valve';
+    if(/sprinkler/.test(ln)) return 'Sprinkler';
+    if(/dripper|drip/.test(ln)) return 'Dripper';
+    if(/van/.test(ln))      return 'VAN Sprinkler';
+    if(/arc/.test(ln))      return 'Circles';
+    if(/text/.test(ln))     return 'Text';
+    if(/dim/.test(ln))      return 'Dimensions';
+    return layerName;
+}
+
+function buildRowsData(parsed) {
+    // Unit conversion to meters (INSUNITS codes)
+    const U2M={0:1,1:0.0254,2:0.3048,4:0.001,5:0.01,6:1,7:1,8:1,9:1,13:0.000001,14:0.1,15:10};
+    const factor=U2M[parsed.insunits]||1;
+    // If insunits=0 (unitless DXF), treat drawing units as mm
+    const toMeters=rawLen=>parsed.insunits===0?(rawLen*0.001):(rawLen*factor);
+
+    // Entity types that must not appear as separate rows in the output
+    const IGNORE_IN_TABLE=new Set(['TEXT','MTEXT','DIMENSION','HATCH','LEADER',
+        'XLINE','RAY','VIEWPORT','IMAGE','SOLID','POINT','WIPEOUT','ATTDEF','SPLINE']);
+
+    const allLayers=new Set([...parsed.layers.map(l=>l.name),...Object.keys(parsed.layerData)]);
+    const rows=[];
+
+    allLayers.forEach(layerName=>{
+        const ld=parsed.layerData[layerName];
+        if(!ld) return;
+
+        // Skip layers that only contain ignored entity types
+        const validCounts=Object.entries(ld.entityCounts)
+            .filter(([t])=>!IGNORE_IN_TABLE.has(t));
+        const hasInsertUsage=Object.keys(ld.insertBlocks).length>0;
+        const hasLineLength=ld.lineLength>0;
+        if(validCounts.length===0&&!hasInsertUsage&&!hasLineLength) return;
+
+        // ── Classify what this layer contains ────────────────────────────────
+        const hasInserts=hasInsertUsage;
+        const insertCount=hasInserts?Object.values(ld.insertBlocks).reduce((a,b)=>a+b,0):0;
+        const lineCount=(ld.entityCounts['LINE']||0)+(ld.entityCounts['LWPOLYLINE']||0)+
+                        (ld.entityCounts['POLYLINE']||0)+(ld.entityCounts['ARC']||0);
+        const circleCount=(ld.entityCounts['CIRCLE']||0);
+        // ── Component name & arabic label ────────────────────────────────────
+        const sortedBlocks=Object.entries(ld.insertBlocks).sort((a,b)=>b[1]-a[1]);
+        const topBlock=sortedBlocks[0];
+        const componentName=inferComponentName(layerName,topBlock?.[0]);
+        const arabicName=translateLayerToArabic(layerName);
+
+        // ── isPipe flag: name-based only (block geometry was already filtered at parse time)
+        const isPipe=/pipe|tube|ماسورة|lateral|mainline|submain|pvc|hdpe|upvc/i
+            .test(layerName+' '+componentName);
+
+        // ── Quantity ─────────────────────────────────────────────────────────
+        let quantity;
+        if(hasInserts&&insertCount>0&&!isPipe){
+            // Block-based components (sprinklers, valves, fittings)
+            quantity=insertCount;
+        } else if(isPipe&&(lineCount>0||ld.lineLength>0)){
+            // Pipe layer: quantity = number of pipe segments/inserts
+            quantity=lineCount>0?lineCount:insertCount;
+        } else if(lineCount>0&&lineCount>=circleCount){
+            quantity=lineCount;
+        } else if(circleCount>0){
+            quantity=circleCount;
+        } else if(hasInserts){
+            quantity=insertCount;
+        } else {
+            quantity=validCounts.reduce((s,[,v])=>s+v,0)||1;
         }
-    }
-    // Fall back to scanning whole file if ENTITIES header not found
-    if (!inEntities) i = 0;
 
-    let entityType = null, layerName = '0', blockName = '';
-    // Coordinate buffers for LINE start/end points
-    let x1 = NaN, y1 = NaN, x2 = NaN, y2 = NaN;
-
-    function commitEntity() {
-        if (!entityType) return;
-        const skip = ['SECTION','ENDSEC','EOF','TABLE','ENDTAB','BLOCK','ENDBLK','SEQEND','ATTRIB'];
-        if (skip.includes(entityType)) return;
-        ensureLayer(layerName);
-        const L = layerData[layerName];
-        if (entityType === 'LINE') {
-            L.LINE++;
-            // Precise 2D Euclidean distance formula: √((X2−X1)² + (Y2−Y1)²)
-            if (!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)) {
-                L.lineLength += Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-            }
-        } else if (entityType === 'LWPOLYLINE') { L.LWPOLYLINE++;
-        } else if (entityType === 'POLYLINE')   { L.POLYLINE++;
-        } else if (entityType === 'INSERT') {
-            if (blockName && !blockName.startsWith('*')) {
-                L.INSERT[blockName] = (L.INSERT[blockName] || 0) + 1;
-            }
-        } else if (entityType === 'ARC')       { L.ARC++;
-        } else if (entityType === 'CIRCLE')    { L.CIRCLE++;   // exact count of CIRCLE entities per layer
-        } else if (entityType === 'TEXT' || entityType === 'ATTDEF') { L.TEXT++;
-        } else if (entityType === 'MTEXT')     { L.MTEXT++;
-        } else if (entityType === 'DIMENSION') { L.DIMENSION++;
-        } else if (entityType === 'HATCH')     { L.HATCH++;
-        } else if (entityType === 'SPLINE')    { L.SPLINE++;
-        } else if (entityType === 'ELLIPSE')   { L.ELLIPSE++; }
-    }
-
-    // Main loop — iterates every code/value pair across the entire file, no truncation
-    for (; i < n - 1; i += 2) {
-        const code = parseInt((lines[i]||'').trim());
-        const val  = (lines[i+1]||'').trim();
-        if (isNaN(code)) continue;
-
-        if (code === 0) {
-            commitEntity();
-            if (val === 'ENDSEC' || val === 'EOF') break;
-            entityType = val; layerName = '0'; blockName = '';
-            x1 = NaN; y1 = NaN; x2 = NaN; y2 = NaN;
-        } else if (code === 8)  { layerName = val;                          // group code 8 = layer name
-        } else if (code === 2 && entityType === 'INSERT') { blockName = val;
-        } else if (code === 10 && entityType === 'LINE') { x1 = parseFloat(val); // LINE start X
-        } else if (code === 20 && entityType === 'LINE') { y1 = parseFloat(val); // LINE start Y
-        } else if (code === 11 && entityType === 'LINE') { x2 = parseFloat(val); // LINE end X
-        } else if (code === 21 && entityType === 'LINE') { y2 = parseFloat(val); // LINE end Y
+        // ── Pipe length ──────────────────────────────────────────────────────
+        // Primary: real geometric length from coordinates (direct entities + block expansion)
+        let length=null, lengthUnit=null;
+        if(isPipe&&ld.lineLength>0){
+            const finalLen=toMeters(ld.lineLength);
+            length=parseFloat(finalLen.toFixed(3));
+            lengthUnit='م.ط';
         }
-    }
-    commitEntity(); // commit last entity before ENDSEC/EOF
 
-    const activeLayerNames = Object.keys(layerData).filter(k => {
-        const L = layerData[k];
-        const totalBlocks = Object.values(L.INSERT).reduce((a, b) => a + b, 0);
-        return (L.LINE + L.LWPOLYLINE + L.POLYLINE + L.ARC + L.CIRCLE +
-                L.TEXT + L.MTEXT + L.DIMENSION + L.HATCH + L.SPLINE + L.ELLIPSE + totalBlocks) > 0;
+        // ── Spec (diameter from name) ────────────────────────────────────────
+        const nameForSpec=layerName+' '+componentName;
+        const specMM=nameForSpec.match(/(\d+)\s*mm/i);
+        const specIn=nameForSpec.match(/(\d+(?:\.\d+)?)\s*(?:inch|in|")/i);
+        const spec=specMM?specMM[1]+' مم':specIn?specIn[1]+'"':null;
+
+        const unit=isPipe&&length!==null?'م.ط':'عدد';
+        rows.push({layerName,arabicName,componentName,quantity,unit,length,lengthUnit,spec});
     });
 
-    // ---- Human-readable summary for display ----
-    let summary = 'تحليل ملف DXF – إجمالي الطبقات النشطة: ' + activeLayerNames.length + '\n\n';
-    for (const lname of activeLayerNames) {
-        const L = layerData[lname];
-        const parts = [];
-        if (L.LINE > 0)       parts.push('خطوط: ' + L.LINE + ' (طول مُحسوب = ' + L.lineLength.toFixed(2) + ' م.ط)');
-        if (L.LWPOLYLINE > 0) parts.push('LWPOLYLINE: ' + L.LWPOLYLINE);
-        if (L.POLYLINE > 0)   parts.push('POLYLINE: ' + L.POLYLINE);
-        if (L.ARC > 0)        parts.push('أقواس: ' + L.ARC);
-        if (L.CIRCLE > 0)     parts.push('دوائر (CIRCLE): عدد = ' + L.CIRCLE);
-        if (L.TEXT > 0)       parts.push('نصوص: ' + L.TEXT);
-        if (L.MTEXT > 0)      parts.push('MTEXT: ' + L.MTEXT);
-        if (L.DIMENSION > 0)  parts.push('أبعاد: ' + L.DIMENSION);
-        if (L.HATCH > 0)      parts.push('تظليل: ' + L.HATCH);
-        if (L.SPLINE > 0)     parts.push('SPLINE: ' + L.SPLINE);
-        const inserts = Object.entries(L.INSERT);
-        if (inserts.length > 0) parts.push('بلوكات: [' + inserts.map(e => e[0] + '×' + e[1]).join(', ') + ']');
-        if (parts.length > 0) summary += '★ طبقة "' + lname + '": ' + parts.join(' | ') + '\n';
-    }
-
-    // ---- Structured machine-readable block so Groq uses EXACT parsed numbers ----
-    summary += '\n\n===PARSED_EXACT_DATA===\n';
-    for (const lname of activeLayerNames) {
-        const L = layerData[lname];
-        const entry = { layer: lname };
-        if (L.LINE > 0)       { entry.LINE_count = L.LINE; entry.LINE_length_m = parseFloat(L.lineLength.toFixed(4)); }
-        if (L.CIRCLE > 0)     { entry.CIRCLE_count = L.CIRCLE; }
-        if (L.ARC > 0)        { entry.ARC_count = L.ARC; }
-        if (L.LWPOLYLINE > 0) { entry.LWPOLYLINE_count = L.LWPOLYLINE; }
-        if (L.POLYLINE > 0)   { entry.POLYLINE_count = L.POLYLINE; }
-        const blkTotal = Object.values(L.INSERT).reduce((a,b)=>a+b,0);
-        if (blkTotal > 0)     { entry.BLOCK_count = blkTotal; entry.BLOCK_names = Object.keys(L.INSERT).join(','); }
-        summary += JSON.stringify(entry) + '\n';
-    }
-    summary += '===END_PARSED_EXACT_DATA===';
-
-    // Store globally so Excel download can cross-reference exact parsed data
-    window._dxfLayerData = layerData;
-    window._dxfActiveLayerNames = activeLayerNames;
-
-    return { summary: summary.trim(), layerData: layerData, activeLayerNames: activeLayerNames };
+    // Sort: pipes first, then valves, sprinklers, circles, other
+    rows.sort((a,b)=>{
+        const rank=r=>/pipe|tube|ماسورة|pvc|hdpe/i.test(r.layerName)?0:
+            /valve|صمام/i.test(r.layerName)?1:
+            /sprinkler|van|رشاش/i.test(r.layerName)?2:
+            /arc|circle|دائرة|قوس/i.test(r.layerName)?3:4;
+        return rank(a)-rank(b)||a.layerName.localeCompare(b.layerName);
+    });
+    return rows;
 }
 
-// ======= DXF FILE HANDLER =======
-window.handleDXFUpload = function(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    event.target.value = "";
-    const maxSize = 25 * 1024 * 1024;
-    if (file.size > maxSize) {
-        Swal.fire({icon:'warning',title:'الملف كبير جداً',text:'الحد الأقصى 25MB. صدّر طبقات محددة من AutoCAD وحاول مجدداً.',confirmButtonColor:'#1b6e2e'}); return;
+window.exportDXFExcel = async function() {
+    const parsed=window._lastParsedDXF;
+    const fileName=window._lastDXFFileName||'drawing.dxf';
+    if(!parsed){
+        Swal.fire({icon:'warning',title:'لا يوجد ملف',text:'ارفع ملف DXF أولاً.',confirmButtonColor:'#1b5e20'});
+        return;
     }
-    Swal.fire({title:'جاري تحليل ملف DXF...', html:'<div style="color:#1b6e2e;font-family:Cairo,sans-serif;">استخراج الطبقات والمكونات الهندسية...</div>',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
+    if(typeof ExcelJS==='undefined'){
+        Swal.fire({icon:'error',title:'مكتبة Excel غير متاحة',text:'تأكد من الاتصال بالإنترنت.',confirmButtonColor:'#1b5e20'});
+        return;
+    }
+    const btn=document.getElementById("aiExportExcelBtn");
+    if(btn){btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin me-1"></i>جاري التصدير...';}
+    try {
+        const wb=new ExcelJS.Workbook();
+        wb.creator='AgriLink Pro';
+        const ws=wb.addWorksheet('جدول الكميات',{views:[{rightToLeft:true,showGridLines:false}]});
+        ws.columns=[5,28,28,22,10,8,10,8,16,10,10,18].map(w=>({width:w}));
 
-    const reader = new FileReader();
-    reader.onload = async function(e) {
+        const DG='1B5E20',MG='2E7D32',LG='E8F5E9',WH='FFFFFFFF',GY='F5F5F5';
+        const bdr=['top','left','bottom','right'].reduce((o,s)=>{o[s]={style:'thin',color:{argb:'CCCCCC'}};return o;},{});
+        const bdrH=['top','left','bottom','right'].reduce((o,s)=>{o[s]={style:'medium',color:{argb:DG}};return o;},{});
+        const ctr={horizontal:'center',vertical:'middle',wrapText:true,readingOrder:'rightToLeft'};
+        const rtl={horizontal:'right',vertical:'middle',readingOrder:'rightToLeft',wrapText:true};
+        const ltr={horizontal:'left',vertical:'middle'};
+        const fillCell=(addr,argb)=>{ ws.getCell(addr).fill={type:'pattern',pattern:'solid',fgColor:{argb}}; };
+        const mergeCell=(r,c1,c2,val,font,align,fill)=>{
+            ws.mergeCells(`${c1}${r}:${c2}${r}`);
+            const cell=ws.getCell(`${c1}${r}`);
+            cell.value=val; cell.font=font; cell.alignment=align;
+            if(fill) cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:fill}};
+        };
+
+        // Rows 1-4: logo (pre-loaded at startup into window._agrilinkLogoB64)
+        for(let r=1;r<=4;r++){ws.addRow([]);ws.getRow(r).height=18;}
         try {
-            const { summary, activeLayerNames } = parseDXFToLayerSummary(e.target.result);
-            if (activeLayerNames.length === 0) {
-                Swal.fire({icon:'warning',title:'لم يُعثر على طبقات نشطة',text:'الملف لا يحتوي على كيانات في قسم ENTITIES، أو أن جميع الطبقات فارغة.',confirmButtonColor:'#1b6e2e'}); return;
+            if(window._agrilinkLogoB64){
+                const imgId=wb.addImage({base64:window._agrilinkLogoB64,extension:'png'});
+                ws.addImage(imgId,{tl:{col:3,row:0},br:{col:8.9,row:3.9},editAs:'oneCell'});
             }
-            window._pendingDXFFileName = file.name;
-            Swal.close();
-            Swal.fire({
-                icon:'success', title:'✅ تم تحليل اللوحة',
-                html:`<div style="font-family:Cairo,sans-serif;text-align:right;direction:rtl;">
-                    <p>تم استخراج <b style="color:#1b6e2e;">${activeLayerNames.length} طبقة نشطة</b> من ملف <b>${file.name}</b></p>
-                    <p class="text-muted small mb-0">جروك AI سيحلل كل طبقة ويُنشئ جدول الكميات الكامل مع زر تحميل Excel تلقائياً.</p>
-                </div>`,
-                confirmButtonText:'ابدأ الحصر الشامل الآن', confirmButtonColor:'#1b6e2e',
-                showCancelButton:true, cancelButtonText:'إلغاء',
-                customClass:{popup:'rounded-4',title:'fw-bold'}
-            }).then(res => {
-                if (res.isConfirmed) {
-                    document.getElementById("aiInput").value = '[تحليل DXF: '+file.name+']\n'+summary;
-                    askGroqAI();
-                }
+        } catch(logoErr){ /* skip if ExcelJS image error */ }
+
+        // Row 5: Title
+        ws.getRow(5).height=30;
+        mergeCell(5,'A','L','منصة AgriLink Pro — الهندسة الزراعية المتكاملة',
+            {bold:true,size:16,color:{argb:DG},name:'Cairo'},ctr,LG);
+
+        // Row 6: Subtitle
+        ws.getRow(6).height=24;
+        mergeCell(6,'A','L','جدول الكميات — حصر شامل لنظم الري واللاندسكيب',
+            {bold:true,size:13,color:{argb:WH},name:'Cairo'},ctr,MG);
+
+        // Rows 7-8: meta
+        const now=new Date();
+        const MN=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        const dateStr=`التاريخ: ${now.getDate()} ${MN[now.getMonth()]} ${now.getFullYear()}`;
+        const rowsData=buildRowsData(parsed);
+
+        ws.getRow(7).height=20;
+        ws.mergeCells('A7:F7'); ws.getCell('A7').value='المشروع: حصر كميات DXF';
+        ws.getCell('A7').font={size:11,name:'Cairo'}; ws.getCell('A7').alignment=ctr;
+        ws.mergeCells('G7:L7'); ws.getCell('G7').value=dateStr;
+        ws.getCell('G7').font={size:11,name:'Cairo'}; ws.getCell('G7').alignment=ctr;
+
+        ws.getRow(8).height=20;
+        ws.mergeCells('A8:F8'); ws.getCell('A8').value=`المهندس: ${(typeof currentUserName!=='undefined'?currentUserName:'')}`;
+        ws.getCell('A8').font={size:11,name:'Cairo'}; ws.getCell('A8').alignment=ctr;
+        ws.mergeCells('G8:L8'); ws.getCell('G8').value=`عدد البنود: ${rowsData.length} بند`;
+        ws.getCell('G8').font={size:11,name:'Cairo'}; ws.getCell('G8').alignment=ctr;
+
+        // Row 9: separator
+        ws.addRow([]); ws.getRow(9).height=6;
+
+        // Row 10: headers
+        const HEADERS=['م','الطبقة','اسم المكون (عربي)','Component Name','الكمية','الوحدة','الأطوال','الوحدة','المواصفة / القطر','التصرف','الضغط','ملاحظات'];
+        const hRow=ws.addRow(HEADERS);
+        hRow.height=28;
+        hRow.eachCell(cell=>{
+            cell.font={bold:true,size:10,color:{argb:WH},name:'Cairo'};
+            cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:DG}};
+            cell.alignment={...ctr};
+            cell.border=bdrH;
+        });
+
+        // Data rows
+        let totalQty=0;
+        rowsData.forEach((row,idx)=>{
+            const dr=ws.addRow([
+                idx+1, row.layerName, row.arabicName, row.componentName,
+                row.quantity, row.unit,
+                row.length!==null?row.length:'-', row.lengthUnit||'-',
+                row.spec||'-', '-', '-', '-'
+            ]);
+            dr.height=22;
+            const even=idx%2===0;
+            dr.eachCell(cell=>{
+                cell.font={size:10,name:'Cairo'};
+                cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:even?GY:WH}};
+                cell.alignment={...ctr};
+                cell.border=bdr;
             });
-        } catch(err) {
-            Swal.fire({icon:'error',title:'خطأ في التحليل',text:'تعذّر تحليل الملف: '+err.message,confirmButtonColor:'#e53e3e'});
-        }
-    };
-    reader.onerror = function() {
-        Swal.fire({icon:'error',title:'خطأ في القراءة',text:'تعذّر قراءة الملف. تأكد أن الملف بصيغة DXF سليمة.',confirmButtonColor:'#e53e3e'});
-    };
-    reader.readAsText(file, 'UTF-8');
+            dr.getCell(2).alignment=rtl;
+            dr.getCell(3).alignment=rtl;
+            dr.getCell(4).alignment=ltr;
+            totalQty+=(row.quantity||0);
+        });
+
+        // Totals row
+        const totRow=ws.addRow(['','الإجمالي','','',totalQty,'عدد','','','','','','']);
+        totRow.height=26;
+        totRow.eachCell(cell=>{
+            cell.font={bold:true,size:11,color:{argb:WH},name:'Cairo'};
+            cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:MG}};
+            cell.alignment={...ctr};
+            cell.border=bdrH;
+        });
+
+        // Footer
+        ws.addRow([]);
+        const fNum=ws.rowCount+1; ws.addRow([]);
+        ws.mergeCells(`A${fNum}:L${fNum}`);
+        const fCell=ws.getCell(`A${fNum}`);
+        fCell.value=`تم إنشاء هذا التقرير بواسطة منصة AgriLink Pro — جميع الحقوق محفوظة © ${now.getFullYear()}`;
+        fCell.font={size:9,italic:true,color:{argb:'666666'},name:'Cairo'};
+        fCell.alignment={...ctr};
+
+        // Download
+        const buffer=await wb.xlsx.writeBuffer();
+        const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url; a.download=fileName.replace(/\.dxf$/i,'_كميات.xlsx');
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
+        Swal.fire({icon:'success',title:'✓ تم التصدير',text:'تم تنزيل ملف Excel بنجاح',confirmButtonColor:'#1b5e20',timer:2500,showConfirmButton:false});
+    } catch(err) {
+        Swal.fire({icon:'error',title:'خطأ في التصدير',text:err.message,confirmButtonColor:'#1b5e20'});
+    } finally {
+        if(btn){btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-file-excel me-1"></i>تصدير Excel';}
+    }
 };
 
 window.askGroqAI = async () => {
     const queryText = document.getElementById("aiInput").value.trim();
-    if (!queryText) return;
+    if (!queryText && !attachedDXFContent) return;
+    const displayText = attachedDXFContent
+        ? (queryText ? `📎 ملف DXF مرفق\n${queryText}` : '📎 ملف DXF مرفق — اقرأ الطبقات والعناصر')
+        : queryText;
+    const aiContextText = attachedDXFContent
+        ? (queryText
+            ? attachedDXFContent + '\n\n---\nسؤال المستخدم: ' + queryText
+            : attachedDXFContent + '\n\n---\nالمطلوب: اشرح لي كل الطبقات والعناصر الموجودة في هذا الملف بالتفصيل.')
+        : queryText;
     document.getElementById("aiInput").value = "";
     document.getElementById("aiSendBtn").disabled = true;
-    const isDXFRequest = queryText.startsWith('[تحليل DXF:') || queryText.startsWith('[ملف مرفق DXF:');
+
+    // Auto-export Excel if DXF is attached and user requests حصر كميات
+    const isQuantityRequest=/حصر|كميات|اعمل.*حصر|كميه|quantity|bill.*of.*material|bom|export.*excel|تصدير/i.test(queryText);
+    if(attachedDXFContent && isQuantityRequest && window._lastParsedDXF){
+        const savedFileName=window._lastDXFFileName;
+        clearAttachedFile();
+        // Setup chat room for status message
+        let qRoomId=currentActiveAIChatRoomId;
+        if(qRoomId==='default'){
+            const qRoom=await addDoc(collection(db,"users",currentUserEmail,"ai_rooms"),{name:'حصر كميات DXF',createdAt:Date.now()});
+            qRoomId=qRoom.id; currentActiveAIChatRoomId=qRoomId;
+            document.getElementById("activeRoomLabel").innerText='حصر كميات DXF';
+            document.getElementById("renameRoomBtn").style.display="inline-block";
+            listenToAIChatMessages(qRoomId);
+        }
+        await addDoc(collection(db,"users",currentUserEmail,"ai_rooms",qRoomId,"messages"),{sender:"user",text:displayText,createdAt:Date.now()});
+        // Run export first, then report result
+        try {
+            await exportDXFExcel();
+            const aiMsg=`✅ تم تصدير جدول الكميات لملف <b>${savedFileName||'الرسم'}</b> بنجاح!<br>📊 الجدول يحتوي على:<ul style="margin:6px 0 0 16px;padding:0;"><li>أسماء الطبقات عربي وإنجليزي</li><li>الكميات الصحيحة لكل بند (عدد أو م.ط)</li><li>أطوال المواسير محسوبة من إحداثيات الرسم</li><li>المواصفات والأقطار</li></ul>تحقق من مجلد التنزيلات.`;
+            await addDoc(collection(db,"users",currentUserEmail,"ai_rooms",qRoomId,"messages"),{sender:"ai",text:aiMsg,createdAt:Date.now()});
+        } catch(exportErr){
+            const errMsg=`❌ حدث خطأ أثناء تصدير جدول الكميات: ${exportErr.message}`;
+            await addDoc(collection(db,"users",currentUserEmail,"ai_rooms",qRoomId,"messages"),{sender:"ai",text:errMsg,createdAt:Date.now()});
+        }
+        document.getElementById("aiSendBtn").disabled=false;
+        return;
+    }
+
+    clearAttachedFile();
     let roomId = currentActiveAIChatRoomId;
     if (roomId==='default') {
-        const topicName = isDXFRequest ? ('حصر DXF: '+(window._pendingDXFFileName||'لوحة')) : (queryText.length>35 ? queryText.substring(0,35)+'...' : queryText);
+        const topicName = (queryText||'ملف DXF').length>35 ? (queryText||'ملف DXF').substring(0,35)+'...' : (queryText||'ملف DXF');
         const newRoom = await addDoc(collection(db,"users",currentUserEmail,"ai_rooms"),{ name:topicName, createdAt:Date.now() });
         roomId = newRoom.id; currentActiveAIChatRoomId = roomId;
         document.getElementById("activeRoomLabel").innerText = topicName;
@@ -2797,82 +3210,79 @@ window.askGroqAI = async () => {
         listenToAIChatMessages(roomId);
     }
     const chatBox = document.getElementById("aiChatBox");
-    const userDisplayText = isDXFRequest ? ('📐 تم رفع ملف DXF: '+(window._pendingDXFFileName||'لوحة')+' — جاري الحصر الشامل...') : queryText;
-    await addDoc(collection(db,"users",currentUserEmail,"ai_rooms",roomId,"messages"),{ sender:"user", text:userDisplayText, createdAt:Date.now() });
+    await addDoc(collection(db,"users",currentUserEmail,"ai_rooms",roomId,"messages"),{ sender:"user", text:displayText, createdAt:Date.now() });
     const typingId = "typing_"+Date.now();
-    chatBox.innerHTML += '<div id="'+typingId+'" class="text-start my-2"><span class="small text-muted d-block mb-1"><i class="fa-solid fa-robot me-1" style="color:var(--gold);"></i>جروك AI — يحلل الطبقات...</span><div class="ai-typing bg-white border rounded-4 d-inline-flex"><span></span><span></span><span></span></div></div>';
+    chatBox.innerHTML += `<div id="${typingId}" class="text-start my-2"><span class="small text-muted d-block mb-1"><i class="fa-solid fa-robot me-1" style="color:var(--gold);"></i>جروك AI</span><div class="ai-typing bg-white border rounded-4 d-inline-flex"><span></span><span></span><span></span></div></div>`;
     chatBox.scrollTop = chatBox.scrollHeight;
     try {
+        // جلب تاريخ المحادثة (آخر 20 رسالة) لإرسالها للـ AI كـ context
         const historySnap = await getDocs(query(
             collection(db,"users",currentUserEmail,"ai_rooms",roomId,"messages"),
-            orderBy("createdAt","asc"), limit(14)
+            orderBy("createdAt","asc"),
+            limit(20)
         ));
         const historyMessages = [];
         historySnap.forEach(d => {
             const m = d.data();
-            if (m.sender==="user") historyMessages.push({ role:"user", content:m.text });
-            else if (m.sender==="ai") {
-                const clean = m.text.replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\[TAKEOFF_JSON\][\s\S]*?\[\/TAKEOFF_JSON\]/g,'');
-                historyMessages.push({ role:"assistant", content:clean });
+            // تجاهل آخر رسالة المستخدم لأننا سنضيفها منفصلة
+            if (m.sender === "user") {
+                historyMessages.push({ role: "user", content: m.text });
+            } else if (m.sender === "ai") {
+                // تنظيف HTML tags من رد الـ AI قبل إرساله
+                const cleanText = m.text.replace(/<[^>]+>/g, '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+                historyMessages.push({ role: "assistant", content: cleanText });
             }
         });
-        if (historyMessages.length>0 && historyMessages[historyMessages.length-1].role==="user") historyMessages.pop();
-
-        const dxfInstructions = isDXFRequest ? `
-
-🔴 مهمة حصر DXF — إلزامية:
-1. اقرأ قسم ===PARSED_EXACT_DATA=== بالكامل واستخرج منه الأرقام الدقيقة لكل طبقة.
-2. ترجم اسم كل طبقة إلى مكون هندسي حقيقي (PIPE_32 = ماسورة PVC قطر 32مم، SPRINKLER = رشاشات، VALVE = صمامات، DRIP = خط تنقيط، TREE = أشجار، GRASS = مساحات خضراء).
-3. ⚠️ استخدم الأرقام الدقيقة المحسوبة فقط — لا تخمّن ولا تُقدّر:
-   - الأطوال: استخدم LINE_length_m تماماً (محسوب بمعادلة √((X2-X1)²+(Y2-Y1)²) لكل خط ثم مجموع الطبقة)
-   - الدوائر: استخدم CIRCLE_count تماماً كما هو — لا تُعدّل
-   - البلوكات/الرشاشات: استخدم BLOCK_count تماماً
-4. أنشئ جدول الحصر الشامل مرتباً بالطبقات مع الكميات الدقيقة.
-5. في نهاية ردك — إلزامياً — أضف كتلة JSON بهذا الشكل الحرفي تماماً:
-[TAKEOFF_JSON]
-[{"layer":"اسم_الطبقة","component_ar":"الاسم العربي","component_en":"English Name","qty":0,"unit":"وحدة","spec":"مواصفة","notes":""}]
-[/TAKEOFF_JSON]
-⚠️ الـ qty يجب أن يكون الرقم الدقيق المستخرج من LINE_length_m أو CIRCLE_count في PARSED_EXACT_DATA — لا صفراً ولا تقدير. الوحدة للأطوال = م.ط، للدوائر والبلوكات = عدد. لا تُدرج أي نص أو HTML داخل كتلة JSON.` : '';
-
-        const systemPromptContent = `أنت مهندس مكتب فني ومستشار هيدروليكي محترف متخصص في شبكات الري واللاندسكيب — منصة AgriLink Pro.${dxfInstructions}
-
-قواعد ثابتة:
-- رحّب بالمستخدم في أول رسالة فقط: ${currentUserName}
-- الحصر والجداول أولاً — لا مقدمات طويلة
-- الوحدات: م.ط (متر طولي)، عدد، م²، م³، كجم، لتر/ساعة
-- المعادلات: Hazen-Williams، Q=AV، Darcy-Weisbach
-- لا تُعد كتابة ملخص DXF الخام، فقط حلّل واستنتج
-- إجابات غير DXF: مختصرة ومباشرة هندسياً`;
-
+        // إزالة آخر رسالة مستخدم من التاريخ (هي queryText الحالية) لتجنب التكرار
+        if (historyMessages.length > 0 && historyMessages[historyMessages.length-1].role === "user") {
+            historyMessages.pop();
+        }
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method:"POST",
-            headers:{"Content-Type":"application/json","Authorization":"Bearer "+GROQ_API_KEY},
-            body:JSON.stringify({
-                model:"llama-3.3-70b-versatile",
-                messages:[
-                    {role:"system",content:systemPromptContent},
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROQ_API_KEY}` },
+            body: JSON.stringify({
+                model: "llama-3.3-70b-versatile",
+                messages: [
+                    { role: "system", content: `أنت مهندس CAD متخصص في تحليل ملفات DXF وحصر كميات شبكات الري على منصة AgriLink Pro.
+
+**قواعد تحليل ملفات DXF — إلزامية:**
+- احسب أطوال المواسير باستخدام الطول الهندسي الحقيقي لكل LINE وLWPOLYLINE وPOLYLINE من الإحداثيات.
+- إذا احتوت الـ Polyline على Bulge فاحسب طول القوس الحقيقي ولا تحوّله إلى خط مستقيم.
+- افك جميع Blocks (INSERT) واقرأ محتواها — لكن لا تكرر العد إذا كان العنصر داخل Block.
+- الرشاشات: إذا كان الرشاش Block يحتوي على Circle/Arc فلا تعدها كعناصر مستقلة. عد الرشاش مرة واحدة فقط من الـ INSERT.
+- تجاهل تماماً عند الحصر: TEXT · MTEXT · DIMENSION · HATCH · LEADER · XLINE · RAY.
+- احسب الكميات حسب اسم الـ Layer.
+- اقرأ وحدات الرسم (INSUNITS) قبل الحساب وأظهر النتائج بالمتر دائماً.
+- لا تعتمد على Bounding Box أو Width أو Scale كبديل للطول الهندسي.
+- قبل إنشاء الجدول تحقق: عدد الرشاشات صحيح ✓ · أطوال المواسير مطابقة للرسم ✓ · الدوائر داخل بلوكات الرشاشات غير محسوبة مستقلة ✓.
+
+**تخصصاتك الهندسية:**
+1. هندسة شبكات الري: حسابات الضغط والتدفق (هازن ويليامز / داراسي-وايزباخ) · فقد الضغط · تصميم الشبكات الرئيسية والفرعية · الري بالتنقيط والرش والمحوري · المضخات والفلاتر · الاحتياجات المائية للمحاصيل (ETc, Kc) · كفاءة التوزيع والتطبيق · المواصفات الفنية للأنابيب (PVC, HDPE, UPVC).
+2. هندسة اللاندسكيب المرتبطة بالري: ري المسطحات والحدائق · احتياجات المياه للنباتات.
+3. تحليل DXF والحصر الكمي: قراءة طبقات AutoCAD · شرح العناصر وأعدادها وأطوالها.
+
+**قواعد صارمة:**
+- أجب فقط على أسئلة هندسة الري والهندسة الزراعية. إذا كان السؤال خارج هذا النطاق قل: "أنا متخصص فقط في هندسة الري والهندسة الزراعية."
+- لا تجب على أسئلة تقنية بدون تأكد. استشهد بالمعايير (ISO, ASABE, ASCE, FAO). قدّم الحسابات خطوة بخطوة مع الوحدات.
+- أجب باللغة العربية دائماً.
+المستخدم الحالي: ${currentUserName} — ${currentUserRole}` },
                     ...historyMessages,
-                    {role:"user",content: isDXFRequest ? "قم بالحصر الشامل الكامل للوحة التالية وأنتج جدول الكميات مع كتلة TAKEOFF_JSON:\n"+queryText : "[مهندس مكتب فني]: "+queryText}
+                    { role: "user", content: aiContextText }
                 ],
-                temperature:0.1,
-                max_tokens: isDXFRequest ? 4000 : 1500
+                temperature: 0.7,
+                max_tokens: 1024
             })
         });
         const typing = document.getElementById(typingId); if(typing) typing.remove();
-        if (!response.ok) { const err=await response.json(); throw new Error("HTTP "+response.status+": "+(err.error&&err.error.message||'خطأ في الاتصال')); }
+        if (!response.ok) { const e=await response.json(); throw new Error(`HTTP ${response.status}: ${e.error?.message||'خطأ'}`); }
         const data = await response.json();
-        if (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content) {
-            let rawReply = data.choices[0].message.content;
-            if (isDXFRequest && rawReply.indexOf('[TAKEOFF_JSON]') === -1) {
-                rawReply += '\n\n⚠️ ملاحظة: لم يتم إنشاء كتلة البيانات المنظمة تلقائياً. يرجى إعادة المحاولة.';
-            }
-            let reply = rawReply.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>');
+        if (data.choices?.[0]?.message?.content) {
+            let reply = data.choices[0].message.content.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
             await addDoc(collection(db,"users",currentUserEmail,"ai_rooms",roomId,"messages"),{ sender:"ai", text:reply, createdAt:Date.now() });
-            if (isDXFRequest) window._pendingDXFFileName = null;
         } else throw new Error('لم يأتِ رد من جروك');
     } catch(err) {
         const typing = document.getElementById(typingId); if(typing) typing.remove();
-        await addDoc(collection(db,"users",currentUserEmail,"ai_rooms",roomId,"messages"),{ sender:"ai", text:"⚠️ خطأ: "+err.message, createdAt:Date.now() });
+        await addDoc(collection(db,"users",currentUserEmail,"ai_rooms",roomId,"messages"),{ sender:"ai", text:`تنبيه: واجهت مشكلة: ${err.message}`, createdAt:Date.now() });
     } finally { document.getElementById("aiSendBtn").disabled=false; }
 };
 
@@ -3631,5 +4041,6 @@ setTimeout(checkInviteParam, 3000);
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 </body>
 </html>
