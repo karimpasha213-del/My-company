@@ -1073,7 +1073,10 @@ window.handleRegister = async (e) => {
     Swal.fire({ title:'جاري إنشاء الحساب...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
     try {
         await createUserWithEmailAndPassword(auth, email, pass);
-        await setDoc(doc(db,"users",email), { name, email, bio:role, phone, gender, avatar:"https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100", createdAt:Date.now() });
+        const defaultAvatar = gender === 'ذكر'
+            ? 'https://raw.githubusercontent.com/karimamr123/ph1/main/ph2.png'
+            : 'https://raw.githubusercontent.com/karimamr123/ph1/main/ph3.png';
+        await setDoc(doc(db,"users",email), { name, email, bio:role, phone, gender, avatar:defaultAvatar, createdAt:Date.now() });
         Swal.fire({ title:'تم الإنشاء!', text:`أهلاً بك ${name}`, icon:'success', confirmButtonColor:'#1b5e20' });
     } catch(err) {
         const msgs = { 'auth/email-already-in-use':'البريد مسجل مسبقاً.','auth/weak-password':'كلمة المرور ضعيفة.','auth/invalid-email':'صيغة البريد غير صحيحة.' };
