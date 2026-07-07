@@ -1074,8 +1074,8 @@ window.handleRegister = async (e) => {
     try {
         await createUserWithEmailAndPassword(auth, email, pass);
         const defaultAvatar = gender === 'ذكر'
-            ? 'https://raw.githubusercontent.com/karimamr123/ph1/main/ph2.png'
-            : 'https://raw.githubusercontent.com/karimamr123/ph1/main/ph3.png';
+            ? 'https://raw.githubusercontent.com/karimpasha213-del/My-company/main/ph2.png'
+            : 'https://raw.githubusercontent.com/karimpasha213-del/My-company/main/ph3.png';
         await setDoc(doc(db,"users",email), { name, email, bio:role, phone, gender, avatar:defaultAvatar, createdAt:Date.now() });
         Swal.fire({ title:'تم الإنشاء!', text:`أهلاً بك ${name}`, icon:'success', confirmButtonColor:'#1b5e20' });
     } catch(err) {
